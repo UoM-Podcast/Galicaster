@@ -1,0 +1,50 @@
+Added install target
+--- a/Makefile
++++ b/Makefile
+@@ -11,9 +11,45 @@
+ # this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ 
+ # or send a letter to Creative Commons, 171 Second Street, Suite 300, 
+ # San Francisco, California, 94105, USA.
+-all: test
++all:
++
+ test:
+ 	nosetests --all-modules
+ check:
+ 	pychecker `find galicaster -name '*.py'`
+ 	pychecker `find test -name '*.py'`
++
++
++BIN=$(DESTDIR)/usr/bin
++SRC=$(DESTDIR)/usr/share/galicaster
++CONFIG=$(DESTDIR)/etc/galicaster
++ICONS=$(DESTDIR)/usr/share/icons/hicolor
++SCALABLE_ICONS=$(DESTDIR)/usr/share/icons/hicolor/scalable/apps
++DOCS=$(DESTDIR)/usr/share/doc/galicaster
++APPS=$(DESTDIR)/usr/share/applications
++
++install:
++	install -d $(BIN) $(SRC) $(CONFIG) $(ICONS) $(SCALABLE_ICONS) $(APPS) $(DOCS)
++	install -m755 ./docs/autostart/galicaster $(BIN)
++	cp -a ./galicaster  $(SRC)
++	cp -a ./docs -t $(SRC)
++	cp -a ./resources $(SRC)
++	cp -a ./tests $(SRC)
++	cp -a ./profiles $(SRC)
++	chmod -R 644 $(SRC)
++	install -m644 ./AUTHORS $(SRC)
++	install -m644 ./CHANGELOG $(SRC)
++	install -m644 ./LICENSE $(SRC)
++	install -m644 ./README $(SRC)
++	install -m644 ./license.txt $(SRC)
++	install -m644 ./Makefile $(SRC)
++	install -m755 ./run_galicaster.py $(SRC)
++	install -m755 ./setup.py $(SRC)
++	install -m644 ./conf-dist.ini $(SRC)
++	install -m644 ./MANIFEST.in $(SRC)
++	install -m644 ./conf.ini $(CONFIG)
++	cp -a ./docs/icons/* -t $(ICONS)
++	chmod -R 644 $(ICONS)
++	install -m644 ./docs/autostart/galicaster.svg $(SCALABLE_ICONS)
++	install -m644 ./docs/autostart/galicaster.desktop $(APPS)
++	install -m644 ./README $(DOCS)
