@@ -224,7 +224,12 @@ class Repository(object):
         return self.__add(mp)
 
 
-    def add_after_rec(self, mp, bins, duration, add_catalogs=True): 
+    def add_after_rec(self, mp, bins, duration, add_catalogs=True):
+        mimetypes = {
+          'mp3' : 'audio/mp3',
+          'aac' : 'audio/x-aac',
+          'avi' : 'video/msvideo'
+        }
         if not self.has(mp):
             mp.setURI(self.__get_folder_name(mp))
             os.mkdir(mp.getURI())
@@ -236,7 +241,11 @@ class Repository(object):
                 filename = os.path.join(bin['path'], bin['file'])
                 dest = os.path.join(mp.getURI(), os.path.basename(filename))
                 os.rename(filename, dest)
-                etype = 'audio/mp3' if bin['device'] in ['pulse','audiotest'] else 'video/' + dest.split('.')[1].lower()
+                ext = dest.split('.')[1].lower()
+                if ext in mimetypes:
+                  etype = mimetypes[ext]
+                else:
+                  etype = 'audio/mp3' if bin['device'] in ['pulse','audiotest'] else 'video/' + ext
                 flavour = bin['flavor'] + '/source'
                 mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration) # FIXME MIMETYPE
         mp.forceDuration(duration)
