@@ -96,14 +96,6 @@ def merge_recordings(self, mpUri):
                 mp.forceDuration(duration)
                 mp_list.update(mp)
                 logger.info("merging complete for UID:%s - URI: %s",uid, mpUri)
-        for fname in os.listdir(rectemp):
-            filepath = os.path.join(rectemp, fname)
-            if os.path.isfile(filepath):
-                filesize=os.path.getsize(filepath)
-                logger.info("found file: %s - size: %s", filepath , str(filesize))
-                if (filesize):
-                    logger.info("removing file: %s - size: %s", filepath , str(filesize))
-                    os.remove(filepath)
         
         
 def check_repository(self):
