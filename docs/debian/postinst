@@ -1,0 +1,2 @@
+pip install icalendar 2>/tmp/install_error.log >/tmp/install.log
+python -m compileall /usr/share/galicaster/run_galicaster.py /usr/share/galicaster/galicaster > /dev/null 
