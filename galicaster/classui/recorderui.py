@@ -405,12 +405,22 @@ class RecorderClassUI(gtk.Box):
         self.mediapackage.properties['origin'] = self.conf.hostname
         self.repo.add_after_rec(self.mediapackage, self.recorder.bins_desc, 
                                 close_duration, self.mediapackage.manual)
-        
-        code = 'manual' if self.mediapackage.manual else 'scheduled'
-        if self.conf.get_lower('ingest', code) == 'immediately':
-            self.worker.ingest(self.mediapackage)
-        elif self.conf.get_lower('ingest', code) == 'nightly':
-            self.worker.ingest_nightly(self.mediapackage)
+        mp_mod_Uri = self.mediapackage.getURI()
+        self.dispatcher.emit("collect-recordings", mp_mod_Uri)
+        duration = self.mediapackage.getDuration()
+        if not duration :
+            for uid,mp in self.repo.iteritems():
+                if (mp.getURI() == mp_mod_Uri) :
+                    self.mediapackage = mp
+                    duration = self.mediapackage.getDuration()
+                    logger.info("updated mediapackage: %s to duration %s", uid , str(duration))
+                    break
+        if self.status != GC_RECORDING : 
+            code = 'manual' if self.mediapackage.manual else 'scheduled'
+            if self.conf.get_lower('ingest', code) == 'immediately':
+                self.worker.ingest(self.mediapackage)
+            elif self.conf.get_lower('ingest', code) == 'nightly':
+                self.worker.ingest_nightly(self.mediapackage)
 
         context.get_state().is_recording = False
         self.timer_thread_id = None
@@ -1171,6 +1181,7 @@ class RecorderClassUI(gtk.Box):
             prevb.set_sensitive(False)
             editb.set_sensitive(True and not self.scheduled_recording)    
             self.dispatcher.emit("update-rec-status", "  Recording  ")
+            context.get_state().is_recording = True
        
         elif state == GC_PAUSED:
             record.set_sensitive(False)
