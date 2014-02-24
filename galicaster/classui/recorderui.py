@@ -407,6 +407,7 @@ class RecorderClassUI(gtk.Box):
                                 close_duration, self.mediapackage.manual)
         mp_mod_Uri = self.mediapackage.getURI()
         self.dispatcher.emit("collect-recordings", mp_mod_Uri)
+        self.dispatcher.emit("recording-closed", mp_mod_Uri)
         duration = self.mediapackage.getDuration()
         if not duration :
             for uid,mp in self.repo.iteritems():
