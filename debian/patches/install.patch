@@ -1,7 +1,7 @@
 Added install target
 --- a/Makefile
 +++ b/Makefile
-@@ -11,9 +11,45 @@
+@@ -11,9 +11,46 @@
  # this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ 
  # or send a letter to Creative Commons, 171 Second Street, Suite 300, 
  # San Francisco, California, 94105, USA.
@@ -27,6 +27,7 @@ Added install target
 +	install -d $(BIN) $(SRC) $(CONFIG) $(ICONS) $(SCALABLE_ICONS) $(APPS) $(DOCS)
 +	install -m755 ./docs/autostart/galicaster $(BIN)
 +	cp -a ./galicaster  $(SRC)
++	cp -a ./contrib -t $(SRC)
 +	cp -a ./docs -t $(SRC)
 +	cp -a ./resources $(SRC)
 +	cp -a ./tests $(SRC)
