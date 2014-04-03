@@ -29,7 +29,10 @@ INGEST_ENDPOINT = '/ingest/addZippedMediaPackage'
 ICAL_ENDPOINT = '/recordings/calendars?agentid={hostname}'
 SERIES_ENDPOINT = '/series/series.json?count={count}' 
 SERVICE_REGISTRY_ENDPOINT = '/services/available.json?serviceType={serviceType}'
+WORKFLOW_ENDPOINT = '/workflow/instance/{id}.json'
 
+WORKFLOW_SERVICE_TYPE = 'org.opencastproject.workflow'
+INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 
 
 class MHHTTPClient(object):
@@ -59,7 +62,7 @@ class MHHTTPClient(object):
             self.workflow_parameters = dict(item.split(":") for item in workflow_parameters.split(";"))
         else:
             self.workflow_parameters = workflow_parameters
-
+        self.workflow_server = None
 
     def __call(self, method, endpoint, params={}, postfield={}, urlencode=True, server=None, timeout=True):
 
@@ -67,7 +70,8 @@ class MHHTTPClient(object):
         c = pycurl.Curl()
         b = StringIO()
         c.setopt(pycurl.URL, theServer + endpoint.format(**params))
-        c.setopt(pycurl.FOLLOWLOCATION, False)
+        # FOLLOWLOCATION, True used for ssl redirect
+        c.setopt(pycurl.FOLLOWLOCATION, True)
         c.setopt(pycurl.CONNECTTIMEOUT, 2)
         if timeout: 
             c.setopt(pycurl.TIMEOUT, 2)
@@ -89,8 +93,9 @@ class MHHTTPClient(object):
         except:
             raise RuntimeError, 'connect timed out!'
         status_code = c.getinfo(pycurl.HTTP_CODE)
-        c.close() 
-        if status_code != 200:
+        c.close()
+        # client will accept 200 or 302 HTTP codes
+        if not (status_code == 200 or status_code == 302):
             if self.logger:
                 self.logger.error('call error in %s, status code {%r}', 
                                   theServer + endpoint.format(**params), status_code)
@@ -185,6 +190,29 @@ class MHHTTPClient(object):
         postdict[u'track'] = (pycurl.FORM_FILE, mp_file)
         return postdict
 
+
+    def _get_endpoints(self, service_type):
+        if self.logger:
+            self.logger.debug('Looking up Matterhorn endpoint for %s', service_type)
+        services = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {'serviceType': service_type}, {},
+                              True, None, True)
+        services = json.loads(services)
+        return services['services']['service']
+
+    def _get_workflow_server(self):
+        if not self.workflow_server:
+            service = self._get_endpoints(WORKFLOW_SERVICE_TYPE)
+            self.workflow_server = str(service['host'])
+        return self.workflow_server
+
+    def search_by_mp_id(self, mp_id):
+        """ Returns result of workflow search for mediapackage workflow id """
+        workflow_server = self._get_workflow_server()
+        result = self.__call('GET', WORKFLOW_ENDPOINT, {'id': mp_id}, {}, True, workflow_server, True)
+        search_result = json.loads(result)
+        return search_result['workflow']['operations']['operation'][2]
+
+
     def verify_ingest_server(self, server):
         """ if we have multiple ingest servers the get_ingest_server should never 
         return the admin node to ingest to, This is verified by the IP address so 
@@ -236,4 +264,3 @@ class MHHTTPClient(object):
         """ Get all series upto 100"""
         # TODO No limit, to get all
         return self.__call('GET', SERIES_ENDPOINT, {'count': 100})
-        
