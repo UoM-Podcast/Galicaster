@@ -74,7 +74,7 @@ def reingest(sender=None):
             if mp.getOpStatus('ingest') == mediapackage.OP_FAILED or mp.getOpStatus('ingest') == mediapackage.OP_IDLE:
                 # check mediapackage status on matterhorn if needed
                 if (check_ingested and not has_ingested(mp_id, mp)) or not check_ingested:
-                    if check_nightly is True:
+                    if check_nightly:
                         logger.info('scheduled nightly reingest of failed mediapackage: %s', mp_id)
                         mp.setOpStatus("ingest", mediapackage.OP_NIGHTLY)
                         repo.update(mp)
