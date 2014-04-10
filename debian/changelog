@@ -1,20 +1,17 @@
-galicaster (1.3.2-uom1) precise; urgency=low
-
-  Upstream:
-  * Fixed Galicaster UI stability issue (Issue #93)
-  * Features: MH 1.4 compatibility, folders name template
-  * Bugs resolved: metadata isPartOf, use of namespace on XML,
-     misassigned MP ID, bug affecting MH series, fixed manual MP startime.
-  * Improves classui documentation, checks minor code glitchs.
-  * Changes University of Manchester specifics modifcations
-  * Ingest to a Opencast Matterhorn cluster with multiple ingest servers.
-  * New Pushpic plugin: Send screenshoots periodically for monitoring with Galicaster Dashboard
-  * Improved VU-meter dynamic range
-  * Fixed bug on dialog modality and focus.
-  * Fixed a bug on No-audio-dialog when reloading a profile.
-  * Fixed serious bug that crashed GC when using Datapath capture cards.
+galicaster (1.4.0-uom1) precise; urgency=low
 
   UoM:
+  * 1.4.0-uom1 (2014-04-09)
+  * Merged 1.4.0 upstream
+ 
+  * 1.3.2-uom1 (2014-03-25)
+  * Merged 1.3.2  upstream
+  * Fixed Galicaster UI stability issue (Issue #93)
+  * Merged retryingest plugin
+  * Fixed, 302 redirects
+
+  * 1.3.1-oum1 (2014-01-20)
+  * Added, checkvideo plugin
   * Debian packaging
   * Check for valid video
   * Better mimetype handling
