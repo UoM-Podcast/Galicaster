@@ -1,0 +1,24 @@
+galicaster (1.3.2-uom1) precise; urgency=low
+
+  Upstream:
+  * Fixed Galicaster UI stability issue (Issue #93)
+  * Features: MH 1.4 compatibility, folders name template
+  * Bugs resolved: metadata isPartOf, use of namespace on XML,
+     misassigned MP ID, bug affecting MH series, fixed manual MP startime.
+  * Improves classui documentation, checks minor code glitchs.
+  * Changes University of Manchester specifics modifcations
+  * Ingest to a Opencast Matterhorn cluster with multiple ingest servers.
+  * New Pushpic plugin: Send screenshoots periodically for monitoring with Galicaster Dashboard
+  * Improved VU-meter dynamic range
+  * Fixed bug on dialog modality and focus.
+  * Fixed a bug on No-audio-dialog when reloading a profile.
+  * Fixed serious bug that crashed GC when using Datapath capture cards.
+
+  UoM:
+  * Debian packaging
+  * Check for valid video
+  * Better mimetype handling
+  * All changes made to 1.3.1 RC4
+
+	
+ -- James Perrin <james.perrin@manchester.ac.uk>  Wed, 02 Apr 2014 17:00:00 +0100

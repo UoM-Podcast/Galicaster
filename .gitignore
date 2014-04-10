@@ -22,6 +22,7 @@ pip-log.txt
 #IDE
 *~
 \#*\#
+nbproject/
 
 #Galicaster unit test / coverage reports
 .coverage
@@ -29,3 +30,6 @@ pip-log.txt
 tests/resources/attach/
 tests/resources/repository/attach/
 tests/resources/profile/folder/
+/.project
+/.pydevproject
+/.settings

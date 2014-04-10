@@ -22,16 +22,19 @@ from collections import OrderedDict
 import urlparse
 import urllib
 
-INIT_ENDPOINT = '/welcome.html'
+INIT_ENDPOINT = '/info/me.json'
 ME_ENDPOINT = '/info/me.json'
 SETRECORDINGSTATE_ENDPOINT = '/capture-admin/recordings/{id}'
 SETSTATE_ENDPOINT = '/capture-admin/agents/{hostname}'
 SETCONF_ENDPOINT = '/capture-admin/agents/{hostname}/configuration'
 INGEST_ENDPOINT = '/ingest/addZippedMediaPackage'
+WORKFLOW_ENDPOINT = '/workflow/instance/{id}.json'
 ICAL_ENDPOINT = '/recordings/calendars'
 SERIES_ENDPOINT = '/series/series.json'
 SERVICE_REGISTRY_ENDPOINT = '/services/available.json'
 
+WORKFLOW_SERVICE_TYPE = 'org.opencastproject.workflow'
+INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 
 
 class MHHTTPClient(object):
@@ -65,7 +68,7 @@ class MHHTTPClient(object):
             self.workflow_parameters = dict(item.split(":") for item in workflow_parameters.split(";"))
         else:
             self.workflow_parameters = workflow_parameters
-
+        self.workflow_server = None
 
     def __call(self, method, endpoint, path_params={}, query_params={}, postfield={}, urlencode=True, server=None, timeout=True):
 
@@ -77,9 +80,10 @@ class MHHTTPClient(object):
         url[2] = endpoint.format(**path_params)
         url[4] = urllib.urlencode(query_params)
         c.setopt(pycurl.URL, urlparse.urlunparse(url))
-
-        c.setopt(pycurl.FOLLOWLOCATION, False)
+        # FOLLOWLOCATION, True used for ssl redirect
+        c.setopt(pycurl.FOLLOWLOCATION, True)
         c.setopt(pycurl.CONNECTTIMEOUT, self.connect_timeout)
+
         if timeout: 
             c.setopt(pycurl.TIMEOUT, self.timeout)
         c.setopt(pycurl.NOSIGNAL, 1)
@@ -102,8 +106,9 @@ class MHHTTPClient(object):
         except:
             raise RuntimeError, 'connect timed out!'
         status_code = c.getinfo(pycurl.HTTP_CODE)
-        c.close() 
-        if status_code != 200:
+        c.close()
+        # client will accept 200 or 302 HTTP codes
+        if not (status_code == 200 or status_code == 302):
             if self.logger:
                 self.logger.error('call error in %s, status code {%r}: %s', 
                                   urlparse.urlunparse(url), status_code, b.getvalue())   
@@ -197,6 +202,28 @@ class MHHTTPClient(object):
         postdict[u'track'] = (pycurl.FORM_FILE, mp_file)
         return postdict
 
+
+    def _get_endpoints(self, service_type):
+        if self.logger:
+            self.logger.debug('Looking up Matterhorn endpoint for %s', service_type)
+        services = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, query_params = {'serviceType': service_type})
+        services = json.loads(services)
+        return services['services']['service']
+
+    def _get_workflow_server(self):
+        if not self.workflow_server:
+            service = self._get_endpoints(WORKFLOW_SERVICE_TYPE)
+            self.workflow_server = str(service['host'])
+        return self.workflow_server
+
+    def search_by_mp_id(self, mp_id):
+        """ Returns result of workflow search for mediapackage workflow id """
+        workflow_server = self._get_workflow_server()
+        result = self.__call('GET', WORKFLOW_ENDPOINT, path_params = {'id': mp_id}, server = workflow_server)
+        search_result = json.loads(result)
+        return search_result['workflow']['operations']['operation'][2]
+
+
     def verify_ingest_server(self, server):
         """ if we have multiple ingest servers the get_ingest_server should never 
         return the admin node to ingest to, This is verified by the IP address so 
@@ -232,7 +259,7 @@ class MHHTTPClient(object):
         if type(all_servers) is list:
             for serv in all_servers:
                 if self.verify_ingest_server(serv):
-                    return str(serv['host']) # Returns less loaded served
+                    return str(serv['host']) # Returns least loaded served
         if self.verify_ingest_server(all_servers):
             return str(all_servers['host']) # There's only one server
         return None # it will use the admin server

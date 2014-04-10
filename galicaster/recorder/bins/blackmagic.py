@@ -50,7 +50,7 @@ FRAMERATE = dict(zip(
 class GCblackmagic(gst.Bin, base.Base):
 
   order = ["name","flavor","location","file",
-           "input-mode","input","audio-input","subdevice",
+           "input-mode","framerate","input","audio-input","subdevice",
            "vumeter", "player", "amplification", 
            "videoencoder", "audioencoder", "muxer"]
 
@@ -119,6 +119,13 @@ class GCblackmagic(gst.Bin, base.Base):
         "720p50", "720p5994","720p60", 
         ],
       "description": "Video input mode (resolution and frame rate)",
+      },
+    "framerate" : {
+      "type": "text",
+      "default": "input",
+      "description": "Optionally override input framerate. To use default input \
+      framerate set to input. (This is a workaround, as changing framerate at the \
+      encoding stage causes serious timestamp issues)"
       },
     "audio-input" : {
       "type": "select",
@@ -191,7 +198,7 @@ class GCblackmagic(gst.Bin, base.Base):
                .replace('gc-blackmagic-enc', self.options['videoencoder'])
                .replace('gc-blackmagic-muxer', self.options['muxer']+" name=gc-blackmagic-muxer")
                .replace('gc-blackmagic-capsfilter', "video/x-raw-yuv,framerate={0}".format(
-              FRAMERATE[self.options["input-mode"]]))
+              FRAMERATE[self.options["input-mode"]] if self.options['framerate'] == "input" else self.options['framerate']))
                )
 
         if self.options["audio-input"] == "none":

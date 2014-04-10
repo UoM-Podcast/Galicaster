@@ -29,6 +29,12 @@ def get_image_path(image_file=""):
     """
     return path.join(get_data_dir(), "images", image_file)
 
+def get_video_path(video_file=""):
+    """Retrieve the path to the folder where video files are stored.
+    If a file name is provided, the path will be for the file
+    """
+    return path.join(get_data_dir(), "videos", video_file)
+
 def get_data_dir():
     """Retrieve the path to the folder where resource files are stored.
     If a file name is provided, the path will be for the file

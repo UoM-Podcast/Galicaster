@@ -224,21 +224,32 @@ class Repository(object):
         return self.__add(mp)
 
 
-    def add_after_rec(self, mp, bins, duration, add_catalogs=True): 
+    def add_after_rec(self, mp, bins, duration, add_catalogs=True):
+        mimetypes = {
+            'mp3' : 'audio/mp3',
+            'aac' : 'audio/x-aac',
+            'avi' : 'video/msvideo'
+        }
         if not self.has(mp):
             mp.setURI(self.__get_folder_name(mp))
             os.mkdir(mp.getURI())
 
         for bin in bins:
             # TODO rec all and ingest 
-            capture_dev_names = mp.getOCCaptureAgentProperty('capture.device.names')
-            if mp.manual or len(capture_dev_names) == 0 or capture_dev_names == 'defaults' or bin['name'] in capture_dev_names:
-                filename = os.path.join(bin['path'], bin['file'])
-                dest = os.path.join(mp.getURI(), os.path.basename(filename))
-                os.rename(filename, dest)
-                etype = 'audio/mp3' if bin['device'] in ['pulse','audiotest'] else 'video/' + dest.split('.')[1].lower()
-                flavour = bin['flavor'] + '/source'
-                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration) # FIXME MIMETYPE
+            # UOM: Always copy all files to repository
+            # capture_dev_names = mp.getOCCaptureAgentProperty('capture.device.names')
+            # if mp.manual or len(capture_dev_names) == 0 or capture_dev_names == 'defaults' or bin['name'] in capture_dev_names:
+            filename = os.path.join(bin['path'], bin['file'])
+            dest = os.path.join(mp.getURI(), os.path.basename(filename))
+            os.rename(filename, dest)
+            ext = dest.split('.')[1].lower()
+            if ext in mimetypes:
+                mimetype = mimetypes[ext]
+            else:
+                mimetype = 'audio/mp3' if bin['device'] in ['pulse','audiotest'] else 'video/' + ext
+            flavour = bin['flavor'] + '/source'
+            mp.add(dest, mediapackage.TYPE_TRACK, flavour, mimetype, duration)
+            
         mp.forceDuration(duration)
 
         if add_catalogs:
