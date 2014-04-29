@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom1) precise; urgency=low
+galicaster (1.3.2-uom2) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -19,6 +19,6 @@ galicaster (1.3.2-uom1) precise; urgency=low
   * Check for valid video
   * Better mimetype handling
   * All changes made to 1.3.1 RC4
-
+  * Fixed, script permissions
 	
- -- James Perrin <james.perrin@manchester.ac.uk>  Wed, 02 Apr 2014 17:00:00 +0100
+ -- James Perrin <james.perrin@manchester.ac.uk>  Tues, 29 Apr 2014 17:00:00 +0100
