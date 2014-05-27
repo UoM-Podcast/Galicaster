@@ -16,6 +16,7 @@
 """
 from galicaster.core import context
 
+logger = context.get_logger()
 
 def init():
     conf = context.get_conf()
@@ -41,7 +42,7 @@ def clear_job(sender=None):
 
     mps = repo.get_past_mediapackages(days)
     for mp in mps:
-        #log
+        logger.info('Mediapackage deleted UID:{0} {1}. older than {2} day(s)'.format(mp.getIdentifier(), mp.getURI(), days))
         repo.delete(mp)
     
 
