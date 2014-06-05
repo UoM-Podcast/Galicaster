@@ -32,21 +32,21 @@ def init():
         dispatcher.connect('recorder-error', restart_galicaster)
 
     except ValueError:
-	    pass
+        pass
 
-def restart_galicaster(self, origin, error_message):
-    if (error_message.startswith("Internal GStreamer error: negotiation problem")):
-        logger.info("GStreamer errror: " + error_message)
+def restart_galicaster(self, error_message):
+    if error_message.startswith("Internal GStreamer error: negotiation problem"):
+        logger.info("GStreamer error: " + error_message)
         logger.info("killing Galicaster")
-        os.system("/usr/share/galicaster/contrib/scripts/kill_gc " + error_message)    
+        os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
 
 def merge_recordings(self, mpUri):
-    dest = os.path.join(mpUri,"CHECK_REPO")
-    repofile = os.path.join(mpUri,"FILE_LIST")
+    dest = os.path.join(mpUri, "CHECK_REPO")
+    repofile = os.path.join(mpUri, "FILE_LIST")
     if os.path.isfile(dest):
         mp_list = context.get_repository()
         rectemp = mp_list.get_rectemp_path()
-        timesfile = open(dest,"r")
+        timesfile = open(dest, "r")
         timespan = timesfile.readline()
         times = timespan.split(',')
         start = datetime.datetime.strptime(times[0], "%Y-%m-%d %H:%M:%S")
@@ -60,22 +60,22 @@ def merge_recordings(self, mpUri):
                     fileitem = os.path.join(filepath, item)
                     timestamp = os.path.getmtime(fileitem)
                     time = datetime.datetime.utcfromtimestamp(timestamp)
-                    if start < time and end > time :
+                    if start < time and end > time:
                         repocheck.write(filepath+"\n")
                         break
             if os.path.isfile(filepath):
                 filesize=os.path.getsize(filepath)
-                logger.info("found file: %s - size: %s", filepath , str(filesize))
-                if (filesize):
-                    logger.info("removing file: %s - size: %s", filepath , str(filesize))
+                logger.info("found file: %s - size: %s", filepath, str(filesize))
+                if filesize:
+                    logger.info("removing file: %s - size: %s", filepath, str(filesize))
                     os.remove(filepath)
         repocheck.close()
         
-        os.system("/usr/share/galicaster/contrib/scripts/concat_mp " + mpUri + " " + repofile )
+        os.system("/usr/share/galicaster/contrib/scripts/concat_mp " + mpUri + " " + repofile)
         duration = -1
-        durpath = os.path.join(mpUri,"DURATION.txt")
+        durpath = os.path.join(mpUri, "DURATION.txt")
         if os.path.isfile(durpath):
-            durfile = open(durpath,"r")
+            durfile = open(durpath, "r")
             duration = durfile.readline()
             durfile.close()
             os.remove(durpath)
@@ -83,24 +83,24 @@ def merge_recordings(self, mpUri):
         os.remove(repofile)
         logger.info("merge packages: " + mpUri)    
         for uid,mp in mp_list.iteritems():
-            if (mp.getURI() == mpUri) :
-                if (duration == -1) :
+            if mp.getURI() == mpUri:
+                if duration == -1:
                     duration = mp.getDuration()
                 for t in mp.getTracks():
-                    mp.remove(t);
+                    mp.remove(t)
                 filename = 'presentation.mp4'
                 dest = os.path.join(mpUri, os.path.basename(filename))
                 etype = 'video/' + dest.split('.')[1].lower()
                 flavour = 'presentation/source'
-                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration) # FIXME MIMETYPE
+                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration)  # FIXME MIMETYPE
                 mp.forceDuration(duration)
                 mp_list.update(mp)
-                logger.info("merging complete for UID:%s - URI: %s",uid, mpUri)
+                logger.info("merging complete for UID:%s - URI: %s", uid, mpUri)
         
         
 def check_repository(self):
     #mp_list is collection of mediapackages ID's
-    if context.get_state().is_recording :
+    if context.get_state().is_recording:
         return
     mp_list = context.get_repository()
 
@@ -111,7 +111,7 @@ def check_repository(self):
             dest = os.path.join(mp.getURI(),"CHECK_REPO")
             if not os.path.isfile(dest):
                 repocheck = open(dest, "w")
-                repocheck.write(str(start) + "," +  str(end) + ",\n")
+                repocheck.write(str(start) + "," + str(end) + ",\n")
                 repocheck.close()
             #duration update            
             x = datetime.datetime.utcnow() - start
@@ -128,5 +128,5 @@ def check_repository(self):
         except ValueError:
                     #log or set default value
                     pass
-		#logging
+        #logging
         logger.info("Mediapackage with UID:%s have been reprogrammed", uid)
