@@ -47,9 +47,7 @@ def changemp(self, action, mp):
     start = mp.getStartDateAsString()
     if series and mp.manual:
         series_title = mhclient.get_single_series(series)['title'][0]['value']
-        series_dict = {}
-        series_dict['identifier'] = series
-        series_dict['title'] = series_title
+        series_dict = {'identifier': series, 'title': series_title}
         mp.setSeries(series_dict)
         logger.info('series {0} - {1} was set for manual recording {2}'.format(series, series_title, mp.getIdentifier()))
     if title and mp.manual:
