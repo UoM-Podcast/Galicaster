@@ -14,6 +14,7 @@ from galicaster.utils.gstreamer import WeakMethod
 #  start_code = <string> (start)
 #  stop_code = <string> (stop)
 #  prescale = <percentage> (100)
+#  resolution = <WidthxHeight> (source) required if prescale < 100
 #  hold_timeout = <secs> (1)
 
 ZBAR_MESSAGE_PATTERN = ("timestamp=\(guint64\)(?P<timestamp>[0-9]+), "
@@ -29,9 +30,13 @@ def init():
         symbols['start'] = conf.get('qrcode', 'start_code') or 'start'
         symbols['stop'] = conf.get('qrcode', 'stop_code') or 'stop'
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
-        prescale = conf.get('qrcode', 'prescale') or 100 # %
+        prescale = int(conf.get('qrcode', 'prescale')) or 100 # %
+        if prescale < 100 :
+            resolution =  conf.get('qrcode', 'resolution')
+        else:
+            resolution = 'source';
         hold_timeout = conf.get('qrcode', 'hold_timeout') or 1 # secs
-        qr = QRCodeScanner(mode, symbols, hold_timeout, prescale, context.get_logger())
+        qr = QRCodeScanner(mode, symbols, hold_timeout, prescale, resolution, context.get_logger())
         
         dispatcher = context.get_dispatcher()
         dispatcher.connect('gst-pipeline-created', qr.qrcode_add_pipeline)
@@ -44,12 +49,13 @@ def init():
         
 class QRCodeScanner():
   
-    def __init__(self, mode, symbols, hold_timeout, prescale, logger=None):
+    def __init__(self, mode, symbols, hold_timeout, prescale, resolution, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
         self.mode = mode
         self.prescale = prescale
+        self.resolution = resolution
         self.hold_timeout = hold_timeout #secs
         self.hold_timeout_ps = hold_timeout*1000000000 #pico secs
         self.hold_timestamp = 0
@@ -168,9 +174,12 @@ class QRCodeScanner():
                 zbar_zbar = gst.element_factory_make("zbar", "zbar-{}-zbar".format(device))
                 zbar_fakesink = gst.element_factory_make("fakesink")
 
+                # FIXME: Assumes all video bins are the same size
                 if self.prescale < 100:
-                    # FIXME, we assume 1280x720
-                    width, height = int(1280*100/prescale), int(720*100/prescale)
+                    expr='[0-9]+[\,x\:][0-9]+' # Parse custom size     
+                    if re.match(expr,self.resolution): 
+                        wh = [int(a) for a in self.resolution.split(re.search('[,x:]',self.resolution).group())]
+                    width, height = int(wh[0]*self.prescale/100), int(wh[1]*self.prescale/100)
                     zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(width, height))
                     zbar_filter.set_property("caps", zbar_caps)
                 else :
