@@ -192,7 +192,6 @@ class RecorderClassUI(gtk.Box):
         self.clock_thread.daemon = True
         self.scheduler_thread.start()
         self.clock_thread.start() 
-        self.dispatcher.emit("galicaster-init")
 
     def select_devices(self):
         """Loads the bins and creates the preview areas for the active profile, creating a new mediapacakge."""
