@@ -247,15 +247,33 @@ class RecorderClassUI(gtk.Box):
         self.select_devices()
 
     def init_recorder(self):
-        self.recorder = Recorder(self.bins, self.areas) 
+        if self.error_dialog:
+            if self.error_id:
+                self.dispatcher.disconnect(self.error_id)
+                self.error_id = None
+            self.error_dialog.dialog_destroy()
+            self.error_dialog = None
+            self.error_text = None
+        self.error_id = self.dispatcher.connect(
+            "recorder-error",
+            self.handle_pipeline_error)
+        self.audiobar.ClearVumeter()
+        context.get_state().is_error = False
+
+        current_profile = self.conf.get_current_profile()
+        bins = current_profile.tracks
+        for objectbin in bins:
+            objectbin['path'] = self.repo.get_rectemp_path()
+
+        self.recorder = Recorder(bins) 
         self.recorder.mute_preview(not self.focus_is_active)   
         ok = self.recorder.preview()
         if ok :
             if self.mediapackage.manual:
                 self.change_state(GC_PREVIEW)
         else:
-            if self.restarting:
-                logger.error("Restarting Preview Failed")
+            logger.error("Restarting Preview Failed")
+            context.get_state().is_error = True
             self.change_state(GC_ERROR)
             if self.scheduled_recording:
                 self.on_failed_scheduled(self.current_mediapackage)
@@ -586,6 +604,7 @@ class RecorderClassUI(gtk.Box):
         If the recording are is active, shows it
         """
         self.change_state(GC_ERROR)
+        context.get_state().is_error = True
         self.recorder.stop_elements()
         context.get_state().is_recording = False
         if self.error_id:
@@ -948,6 +967,7 @@ class RecorderClassUI(gtk.Box):
             if self.error_text:            
                 if self.status != GC_ERROR:
                     self.change_state(GC_ERROR)
+                    context.get_state().is_error = True
                 self.launch_error_message(self.error_text)            
 
         if old_state == 0:
