@@ -30,6 +30,10 @@ nbproject/
 tests/resources/attach/
 tests/resources/repository/attach/
 tests/resources/profile/folder/
+
+# IDE project files
+nbproject/
 /.project
 /.pydevproject
 /.settings
+/.idea
