@@ -246,32 +246,15 @@ class RecorderClassUI(gtk.Box):
         self.select_devices()
 
     def init_recorder(self):
-        if self.error_dialog:
-            if self.error_id:
-                self.dispatcher.disconnect(self.error_id)
-                self.error_id = None
-            self.error_dialog.dialog_destroy()
-            self.error_dialog = None
-            self.error_text = None
-        self.error_id = self.dispatcher.connect(
-            "recorder-error",
-            self.handle_pipeline_error)
-        self.audiobar.ClearVumeter()
-        context.get_state().is_error = False
-
-        current_profile = self.conf.get_current_profile()
-        bins = current_profile.tracks
-        for objectbin in bins:
-            objectbin['path'] = self.repo.get_rectemp_path()
-
-        self.recorder = Recorder(bins) 
+        self.recorder = Recorder(self.bins, self.areas) 
         self.recorder.mute_preview(not self.focus_is_active)   
         ok = self.recorder.preview()
         if ok :
             if self.mediapackage.manual:
                 self.change_state(GC_PREVIEW)
         else:
-            logger.error("Restarting Preview Failed")
+            if self.restarting:
+                logger.error("Restarting Preview Failed")
             context.get_state().is_error = True
             self.change_state(GC_ERROR)
             if self.scheduled_recording:
