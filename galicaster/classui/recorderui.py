@@ -255,7 +255,6 @@ class RecorderClassUI(gtk.Box):
         else:
             if self.restarting:
                 logger.error("Restarting Preview Failed")
-            context.get_state().is_error = True
             self.change_state(GC_ERROR)
             if self.scheduled_recording:
                 self.on_failed_scheduled(self.current_mediapackage)
@@ -586,7 +585,6 @@ class RecorderClassUI(gtk.Box):
         If the recording are is active, shows it
         """
         self.change_state(GC_ERROR)
-        context.get_state().is_error = True
         self.recorder.stop_elements()
         context.get_state().is_recording = False
         if self.error_id:
@@ -949,7 +947,6 @@ class RecorderClassUI(gtk.Box):
             if self.error_text:            
                 if self.status != GC_ERROR:
                     self.change_state(GC_ERROR)
-                    context.get_state().is_error = True
                 self.launch_error_message(self.error_text)            
 
         if old_state == 0:
