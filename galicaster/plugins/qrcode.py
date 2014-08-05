@@ -25,17 +25,17 @@ ZBAR_MESSAGE_PATTERN = ("timestamp=\(guint64\)(?P<timestamp>[0-9]+), "
 def init():
     try:
         conf = context.get_conf()
-        mode = conf.get('qrcode', 'pause_mode') or 'hold' # or 'start_stop'
+        mode = conf.get('qrcode', 'pause_mode') or 'hold'  # or 'start_stop'
         symbols = {}
         symbols['start'] = conf.get('qrcode', 'start_code') or 'start'
         symbols['stop'] = conf.get('qrcode', 'stop_code') or 'stop'
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
-        prescale = int(conf.get('qrcode', 'prescale')) or 100 # %
-        if prescale < 100 :
+        prescale = int(conf.get('qrcode', 'prescale')) or 100  # %
+        if prescale < 100:
             resolution =  conf.get('qrcode', 'resolution')
         else:
             resolution = 'source';
-        hold_timeout = conf.get('qrcode', 'hold_timeout') or 1 # secs
+        hold_timeout = conf.get('qrcode', 'hold_timeout') or 1  # secs
         qr = QRCodeScanner(mode, symbols, hold_timeout, prescale, resolution, context.get_logger())
         
         dispatcher = context.get_dispatcher()
@@ -45,8 +45,9 @@ def init():
         dispatcher.connect('recording-closed', qr.qrcode_disconnect_to_sync_message)
         
     except ValueError:
-	pass
-        
+        pass
+
+
 class QRCodeScanner():
   
     def __init__(self, mode, symbols, hold_timeout, prescale, resolution, logger=None):
@@ -56,8 +57,8 @@ class QRCodeScanner():
         self.mode = mode
         self.prescale = prescale
         self.resolution = resolution
-        self.hold_timeout = hold_timeout #secs
-        self.hold_timeout_ps = hold_timeout*1000000000 #pico secs
+        self.hold_timeout = hold_timeout  # secs
+        self.hold_timeout_ps = hold_timeout*1000000000  # pico secs
         self.hold_timestamp = 0
         self.hold_timer = None
         self.hold_timer_timestamp = 0
@@ -79,45 +80,45 @@ class QRCodeScanner():
         dispatcher.disconnect(self.sync_msg_handler)
 
     def qrcode_on_sync_message(self, dispatcher, recorder, bus, message):
-        if(message.structure.get_name() == "barcode"):
-          # Message fields are:
-          # name, timestamp, type, symbol, quality
-          # but there is no get_value function!
-          fieldstr = message.structure.to_string()
+        if message.structure.get_name() == "barcode":
+            # Message fields are:
+            # name, timestamp, type, symbol, quality
+            # but there is no get_value function!
+            fieldstr = message.structure.to_string()
 
-          m = re.search(self.msg_pattern, fieldstr)
-          timestamp = int(m.group('timestamp'))
-          type = m.group('type')
-          symbol = m.group('symbol')
-          quality = int(m.group('quality'))
+            m = re.search(self.msg_pattern, fieldstr)
+            timestamp = int(m.group('timestamp'))
+            type = m.group('type')
+            symbol = m.group('symbol')
+            quality = int(m.group('quality'))
 
-          # ingore non qrcodes
-          if(type == 'QR-Code'):
-            self.handle_symbol(recorder, symbol, timestamp)
+            # ingore non qrcodes
+            if type == 'QR-Code':
+                self.handle_symbol(recorder, symbol, timestamp)
 
     def handle_symbol(self, recorder, symbol, timestamp):
         #print recorder.get_status()
         #print symbol
         gst_status = recorder.get_status()[1]
 
-        if(context.get_state().is_recording and gst_status == gst.STATE_PLAYING):
-            if(self.mode == 'start_stop'):
-                if(symbol == self.symbol_stop and self.recording_paused == False ):
-                   #print 'PAUSING'
-                   self.logger.info('Pause recording at {}'.format(timestamp))
-                   self.recording_paused = True
-                   recorder.pause_record()
+        if context.get_state().is_recording and gst_status == gst.STATE_PLAYING:
+            if self.mode == 'start_stop' :
+                if symbol == self.symbol_stop and not self.recording_paused:
+                    #print 'PAUSING'
+                    self.logger.info('Pause recording at {}'.format(timestamp))
+                    self.recording_paused = True
+                    recorder.pause_record()
 
-                if(symbol == self.symbol_start and self.recording_paused == True):
+                if symbol == self.symbol_start and self.recording_paused:
                     #print 'RESUMING'
                     self.logger.info('Resume recording at {}'.format(timestamp))
                     self.recording_paused = False
                     recorder.record()
                     
             else: # mode == hold 
-                if(symbol == self.symbol_hold):
+                if symbol == self.symbol_hold :
                     # pause
-                    if(self.recording_paused == False ):
+                    if not self.recording_paused:
                         #print 'PAUSING'
                         recorder.pause_record()
                         self.logger.info('Paused recording at {}'.format(timestamp))
@@ -129,20 +130,20 @@ class QRCodeScanner():
                     # setup restart
                     # every hold_timeout create a timer call 2xhold_timeout in the future
                     # max delay in resume is 2x hold_timeout
-                    if(not self.hold_timer or ((timestamp - self.hold_timer_timestamp) >= self.hold_timeout_ps)):
+                    if not self.hold_timer or ((timestamp - self.hold_timer_timestamp) >= self.hold_timeout_ps):
                         #print "Creating timer...{} {}".format(timestamp, self.hold_timer_timestamp)
                         self.hold_timer = Timer(self.hold_timeout*2, self.has_hold_timed_out, [recorder, timestamp])
                         self.hold_timer.start()
-                        self.hold_timer_timestamp = timestamp;
+                        self.hold_timer_timestamp = timestamp
                     
                     # store this TS
                     self.hold_timestamp = timestamp
 
     def hold_timed_out(self, recorder):
         #print 'RESUMING'
-        self.logger.info('Resume recording at {}'.format(self.holder_timestamp + self.hold_timeout_ps))
+        self.logger.info('Resume recording at {}'.format(self.hold_timestamp + self.hold_timeout_ps))
         self.recording_paused = False
-        recorder.record() #recorder
+        recorder.record()  # recorder
         
     def has_hold_timed_out(self, recorder, timestamp):
         #print '...timer testing {} {} {}'.format(timestamp, self.hold_timestamp, self.hold_timestamp-timestamp)       
@@ -151,14 +152,14 @@ class QRCodeScanner():
             #print 'RESUMING {} {}'.format(timestamp, self.hold_timestamp)
             self.logger.info('Resume recording at {}'.format(self.hold_timestamp + self.hold_timeout_ps))
             self.recording_paused = False
-            recorder.record() #recorder
+            recorder.record()  # recorder
             self.hold_timer = None
         
     # find the video device with the configured flavour
     # and add the zbar pipe to that
     def qrcode_add_pipeline(self, recorder, pipeline, bus, bins):
         for name, bin in bins.iteritems():
-            if bin.has_video == True:
+            if bin.has_video:
                 device = bin.options['device']
 
                 # Create the following subpipe:
@@ -176,9 +177,9 @@ class QRCodeScanner():
 
                 # FIXME: Assumes all video bins are the same size
                 if self.prescale < 100:
-                    expr='[0-9]+[\,x\:][0-9]+' # Parse custom size     
+                    expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size     
                     if re.match(expr,self.resolution): 
-                        wh = [int(a) for a in self.resolution.split(re.search('[,x:]',self.resolution).group())]
+                        wh = [int(a) for a in self.resolution.split(re.search('[,x:]', self.resolution).group())]
                     width, height = int(wh[0]*self.prescale/100), int(wh[1]*self.prescale/100)
                     zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(width, height))
                     zbar_filter.set_property("caps", zbar_caps)
