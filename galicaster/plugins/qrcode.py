@@ -102,20 +102,7 @@ class QRCodeScanner():
         gst_status = recorder.get_status()[1]
 
         if context.get_state().is_recording and gst_status == gst.STATE_PLAYING:
-            if self.mode == 'start_stop' :
-                if symbol == self.symbol_stop and not self.recording_paused:
-                    #print 'PAUSING'
-                    self.logger.info('Pause recording at {}'.format(timestamp))
-                    self.recording_paused = True
-                    recorder.pause_record()
-
-                if symbol == self.symbol_start and self.recording_paused:
-                    #print 'RESUMING'
-                    self.logger.info('Resume recording at {}'.format(timestamp))
-                    self.recording_paused = False
-                    recorder.record()
-                    
-            else: # mode == hold 
+            if self.mode == 'hold' :
                 if symbol == self.symbol_hold :
                     # pause
                     if not self.recording_paused:
@@ -139,6 +126,19 @@ class QRCodeScanner():
                     # store this TS
                     self.hold_timestamp = timestamp
 
+            else: # mode == start_stop 
+                if symbol == self.symbol_stop and not self.recording_paused:
+                    #print 'PAUSING'
+                    self.logger.info('Pause recording at {}'.format(timestamp))
+                    self.recording_paused = True
+                    recorder.pause_record()
+
+                if symbol == self.symbol_start and self.recording_paused:
+                    #print 'RESUMING'
+                    self.logger.info('Resume recording at {}'.format(timestamp))
+                    self.recording_paused = False
+                    recorder.record()
+                    
     def hold_timed_out(self, recorder):
         #print 'RESUMING'
         self.logger.info('Resume recording at {}'.format(self.hold_timestamp + self.hold_timeout_ps))
