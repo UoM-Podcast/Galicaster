@@ -7,20 +7,30 @@ import gst
 
 from galicaster.core import context
 from galicaster.utils.gstreamer import WeakMethod
+from galicaster.classui.recorderui import GC_RECORDING
+from galicaster.classui.recorderui import GC_RECORDING_PAUSED
 
 # options:
 #  pause_mode = [hold|start_stop] (hold)
 #  hold_code = <string> (hold)
 #  start_code = <string> (start)
 #  stop_code = <string> (stop)
-#  prescale = <percentage> (100)
-#  resolution = <WidthxHeight> (source) required if prescale < 100
+#  rescale = <WidthxHeight> (source)
 #  hold_timeout = <secs> (1)
+#  mp_add_edits = <boolean> (false)
+#  mp_force_trimhold = <boolean> (false)
+#  mp_add_smil = <boolean> (false)
 
+# NOTE: the timestamps are for the duration that the pipeline has been running
+# ie in preview/recording not just recording
 ZBAR_MESSAGE_PATTERN = ("timestamp=\(guint64\)(?P<timestamp>[0-9]+), "
                      "type=\(string\)(?P<type>.+), "
                      "symbol=\(string\)(?P<symbol>.+), "
                      "quality=\(int\)(?P<quality>[0-9]+)")
+
+NANO2SEC = 1000000000.0
+SEC2NANO = 1000000000
+WORKFLOW_CONFIG = 'org.opencastproject.workflow.config'
 
 def init():
     try:
@@ -30,19 +40,19 @@ def init():
         symbols['start'] = conf.get('qrcode', 'start_code') or 'start'
         symbols['stop'] = conf.get('qrcode', 'stop_code') or 'stop'
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
-        prescale = int(conf.get('qrcode', 'prescale')) or 100  # %
-        if prescale < 100:
-            resolution =  conf.get('qrcode', 'resolution')
-        else:
-            resolution = 'source';
+        rescale = conf.get('qrcode', 'rescale') or 'source'
         hold_timeout = conf.get('qrcode', 'hold_timeout') or 1  # secs
-        qr = QRCodeScanner(mode, symbols, hold_timeout, prescale, resolution, context.get_logger())
-        
+        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, context.get_logger())
+
         dispatcher = context.get_dispatcher()
         dispatcher.connect('gst-pipeline-created', qr.qrcode_add_pipeline)
         # only process sync-messages when recording to reduce overhead
         dispatcher.connect('starting-record', qr.qrcode_connect_to_sync_message)
         dispatcher.connect('recording-closed', qr.qrcode_disconnect_to_sync_message)
+        qr.set_add_edits(conf.get('qrcode', 'mp_add_edits') or False)
+        qr.set_trimhold(conf.get('qrcode', 'mp_force_trimhold') or False)
+        qr.set_add_smil(conf.get('qrcode', 'mp_add_smil') or False)
+        dispatcher.connect('recording-closed', qr.qrcode_update_mediapackage)
         
     except ValueError:
         pass
@@ -50,15 +60,14 @@ def init():
 
 class QRCodeScanner():
   
-    def __init__(self, mode, symbols, hold_timeout, prescale, resolution, logger=None):
+    def __init__(self, mode, symbols, hold_timeout, rescale, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
         self.mode = mode
-        self.prescale = prescale
-        self.resolution = resolution
+        self.rescale = rescale
         self.hold_timeout = hold_timeout  # secs
-        self.hold_timeout_ps = hold_timeout*1000000000  # pico secs
+        self.hold_timeout_ns = hold_timeout*SEC2NANO  # nano secs
         self.hold_timestamp = 0
         self.hold_timer = None
         self.hold_timer_timestamp = 0
@@ -68,18 +77,44 @@ class QRCodeScanner():
         self.recording_paused = False
         self.sync_msg_handler = None
         self.msg_pattern = re.compile(ZBAR_MESSAGE_PATTERN)
-  
-    def qrcode_connect_to_sync_message(self, recorderui):
+        # mediapackage modifiers
+        self.trimhold = False
+        self.add_smil = False
+        self.add_edits = False
+
+    # set additional parameters
+    def set_trimhold(self, v):
+        self.trimhold = v
+
+    def set_add_smil(self, v):
+        self.add_smil = v
+    
+    def set_add_edits(self, v):
+        self.add_edits = v
+
+    # signal handlers
+    def qrcode_connect_to_sync_message(self, sender, recorderui):
         #print "Connecting to sync messages"
+        # NOTE This callback runs just before the recording actually starts
+        #      Therefore recording_start_timestamp is a bit early
+        clock = recorderui.recorder.pipeline.get_clock()
+        self.recording_start_timestamp = clock.get_time() - recorderui.recorder.pipeline.get_base_time()
+        self.total_pause_duration = 0
+        self.last_pause_timestamp = 0
+        self.editpoints = []
+        self.recorderui = recorderui
         dispatcher = context.get_dispatcher()
         self.sync_msg_handler = dispatcher.connect('gst-sync-message', self.qrcode_on_sync_message)
     
-    def qrcode_disconnect_to_sync_message(self, recorderui, mpurl):
+    def qrcode_disconnect_to_sync_message(self, sender, mpurl):
         #print "Disconnecting from sync messages"
         dispatcher = context.get_dispatcher()
         dispatcher.disconnect(self.sync_msg_handler)
 
-    def qrcode_on_sync_message(self, dispatcher, recorder, bus, message):
+        #for e in self.editpoints:
+        #    print e
+
+    def qrcode_on_sync_message(self, sender, recorder, bus, message):
         if message.structure.get_name() == "barcode":
             # Message fields are:
             # name, timestamp, type, symbol, quality
@@ -92,7 +127,7 @@ class QRCodeScanner():
             symbol = m.group('symbol')
             quality = int(m.group('quality'))
 
-            # ingore non qrcodes
+            # ignore non qrcodes
             if type == 'QR-Code':
                 self.handle_symbol(recorder, symbol, timestamp)
 
@@ -102,58 +137,66 @@ class QRCodeScanner():
         gst_status = recorder.get_status()[1]
 
         if context.get_state().is_recording and gst_status == gst.STATE_PLAYING:
-            if self.mode == 'hold' :
-                if symbol == self.symbol_hold :
+            if self.mode == 'hold':
+                if self.symbol_hold == symbol:
                     # pause
                     if not self.recording_paused:
                         #print 'PAUSING'
                         recorder.pause_record()
-                        self.logger.info('Paused recording at {}'.format(timestamp))
+                        # set UI state so that MP duration is calculated correctly
+                        self.recorderui.change_state(GC_RECORDING_PAUSED)
+                        self.logger.info('Paused recording at {}'.format((timestamp)/NANO2SEC))
                         self.recording_paused = True
                         self.hold_timestamp = 0
                         self.hold_timer = None
                         self.hold_timer_timestamp = 0
                         
+                        # store editpoints
+                        self.editpoints.append((timestamp-self.total_pause_duration-self.recording_start_timestamp)/NANO2SEC)
+                        self.logger.info('Editpoint @ {}'.format(self.editpoints[len(self.editpoints)-1]))
+                        self.last_pause_timestamp = timestamp
+                        
                     # setup restart
-                    # every hold_timeout create a timer call 2xhold_timeout in the future
+                    # every hold_timeout create a timer call 2x hold_timeout in the future
                     # max delay in resume is 2x hold_timeout
-                    if not self.hold_timer or ((timestamp - self.hold_timer_timestamp) >= self.hold_timeout_ps):
+                    if not self.hold_timer or ((timestamp - self.hold_timer_timestamp) >= self.hold_timeout_ns):
                         #print "Creating timer...{} {}".format(timestamp, self.hold_timer_timestamp)
                         self.hold_timer = Timer(self.hold_timeout*2, self.has_hold_timed_out, [recorder, timestamp])
                         self.hold_timer.start()
                         self.hold_timer_timestamp = timestamp
                     
-                    # store this TS
+                    # temporary store this TS
                     self.hold_timestamp = timestamp
 
             else: # mode == start_stop 
                 if symbol == self.symbol_stop and not self.recording_paused:
                     #print 'PAUSING'
-                    self.logger.info('Pause recording at {}'.format(timestamp))
+                    self.logger.info('Paused recording at {}'.format(timestamp))
                     self.recording_paused = True
                     recorder.pause_record()
 
                 if symbol == self.symbol_start and self.recording_paused:
                     #print 'RESUMING'
-                    self.logger.info('Resume recording at {}'.format(timestamp))
+                    self.logger.info('Resumed recording at {}'.format(timestamp))
                     self.recording_paused = False
                     recorder.record()
-                    
-    def hold_timed_out(self, recorder):
-        #print 'RESUMING'
-        self.logger.info('Resume recording at {}'.format(self.hold_timestamp + self.hold_timeout_ps))
-        self.recording_paused = False
-        recorder.record()  # recorder
-        
+    
     def has_hold_timed_out(self, recorder, timestamp):
         #print '...timer testing {} {} {}'.format(timestamp, self.hold_timestamp, self.hold_timestamp-timestamp)       
         # how old is self.hold_timestamp?
-        if (self.hold_timestamp-timestamp) < self.hold_timeout_ps:
+        if (self.hold_timestamp-timestamp) < self.hold_timeout_ns:
             #print 'RESUMING {} {}'.format(timestamp, self.hold_timestamp)
-            self.logger.info('Resume recording at {}'.format(self.hold_timestamp + self.hold_timeout_ps))
             self.recording_paused = False
-            recorder.record()  # recorder
-            self.hold_timer = None
+            # Check if the 'recording' has been ended
+            if context.get_state().is_recording:
+                recorder.record()  # recorder
+                self.recorderui.change_state(GC_RECORDING)
+                clock = recorder.pipeline.get_clock()
+                gstimestamp = clock.get_time() - recorder.pipeline.get_base_time()
+                self.logger.info('Resumed recording at {}'.format(gstimestamp/NANO2SEC))
+                self.logger.info('Paused for {}'.format((gstimestamp - self.last_pause_timestamp)/NANO2SEC))
+                self.total_pause_duration += gstimestamp - self.last_pause_timestamp
+                self.hold_timer = None
         
     # find the video device with the configured flavour
     # and add the zbar pipe to that
@@ -175,13 +218,10 @@ class QRCodeScanner():
                 zbar_zbar = gst.element_factory_make("zbar", "zbar-{}-zbar".format(device))
                 zbar_fakesink = gst.element_factory_make("fakesink")
 
-                # FIXME: Assumes all video bins are the same size
-                if self.prescale < 100:
-                    expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size     
-                    if re.match(expr,self.resolution): 
-                        wh = [int(a) for a in self.resolution.split(re.search('[,x:]', self.resolution).group())]
-                    width, height = int(wh[0]*self.prescale/100), int(wh[1]*self.prescale/100)
-                    zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(width, height))
+                expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size
+                if self.rescale != 'source' and re.match(expr,self.rescale):
+                    wh = [int(a) for a in self.rescale.split(re.search('[,x:]', self.rescale).group())]
+                    zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(wh[0], wh[1]))
                     zbar_filter.set_property("caps", zbar_caps)
                 else :
                     zbar_caps = gst.Caps("video/x-raw-yuv")
@@ -199,3 +239,38 @@ class QRCodeScanner():
                       
         self.pipeline = pipeline
         self.bins = bins
+
+    def qrcode_update_mediapackage(self, sender, mpurl):
+        if(self.add_edits or self.trimhold or self.add_smil):
+            mp = self.recorderui.mediapackage
+            occap = mp.getOCCaptureAgentProperties()
+                
+            if len(self.editpoints):
+                if self.add_edits:
+                    self.logger.debug('Adding WF Edit parameters')
+                    # flag that we want the workflow to edit our mediapackage
+                    occap[WORKFLOW_CONFIG + '.editor'] = 'true'
+        
+                    editpoints_str = ','.join(map(str,self.editpoints))
+                    occap[WORKFLOW_CONFIG + '.qrcEditpoints'] = editpoints_str
+                    occap[WORKFLOW_CONFIG + '.qrcNEditpoints'] = len(self.editpoints)
+        
+                if self.trimhold:
+                    self.logger.debug('Forcing WF trimHold')
+                    occap[WORKFLOW_CONFIG + '.trimHold'] = 'true'
+                
+                if self.add_smil:
+                    self.create_smil(mp, occap)
+                    
+            occap_list = []
+            for prpt, value in occap.items():
+                 occap_list.append(prpt + '=' + str(value))
+    
+            prpts_str = '\n'.join(occap_list)
+                
+            mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties', False, 'org.opencastproject.capture.agent.properties')
+            # FIXME: add to WF props for manual recordings too
+
+    def create_smil(self, mp, occap):
+        # TODO: call smil service
+        self.logger.info('Create SMIL')
