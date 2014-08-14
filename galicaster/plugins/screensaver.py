@@ -52,7 +52,7 @@ def activate_screensaver(signal=None):
 def deactivate_screensaver(signal=None):
     os.system('xset s off')
 
-def deactivate_and_poke(signal=None):
+def deactivate_and_poke(signal=None, recorderui=None):
     deactivate_screensaver()
     poke_screen()
 

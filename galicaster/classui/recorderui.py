@@ -291,7 +291,7 @@ class RecorderClassUI(gtk.Box):
     def on_rec(self,button=None): 
         """Manual Recording """
         logger.info("Recording")
-        self.dispatcher.emit("starting-record")
+        self.dispatcher.emit("starting-record", self)
         self.recorder.record()
         self.mediapackage.status=mediapackage.RECORDING
         now = datetime.datetime.utcnow().replace(microsecond=0)
