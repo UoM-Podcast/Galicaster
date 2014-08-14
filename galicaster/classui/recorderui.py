@@ -55,6 +55,7 @@ GC_PAUSED = 5
 GC_STOP = 6
 GC_BLOCKED = 7
 GC_ERROR = 9
+GC_RECORDING_PAUSED = 10
 
 
 
@@ -68,6 +69,7 @@ STATUS = [  ["Initialization","#F7F6F6"],
             ["Blocked","#F7F6F6"],
             ["Waiting","#F7F6F6"],
             ["Error","#FFFF00"],
+            ["Recording","#F7F6F6"]
             ]
 
 
@@ -438,7 +440,7 @@ class RecorderClassUI(gtk.Box):
             self.mediapackage = self.repo.get(self.current_mediapackage)
             self.on_rec() 
         
-        elif self.status in [ GC_RECORDING, GC_PAUSED ] :
+        elif self.status in [ GC_RECORDING, GC_PAUSED, GC_RECORDING_PAUSED ] :
 
             if self.allow_overlap:
                 pass
@@ -475,7 +477,7 @@ class RecorderClassUI(gtk.Box):
             context.get_state().mp = self.mediapackage.identifier
             self.on_rec() 
         
-        elif self.status in [ GC_RECORDING, GC_PAUSED ] :
+        elif self.status in [ GC_RECORDING, GC_PAUSED, GC_RECORDING_PAUSED ] :
 
             if self.allow_overlap:
                 pass
@@ -689,7 +691,7 @@ class RecorderClassUI(gtk.Box):
         #while True:
             actual_time=self.recorder.get_time()               
             timer=(actual_time-self.initial_time)/gst.SECOND
-            if self.status==GC_PAUSED:
+            if self.status in [GC_PAUSED, GC_RECORDING_PAUSED]:
                 self.paused_time = self.paused_time + datetime.timedelta(0,0,200000)               
             dif = datetime.datetime.utcnow() - self.initial_datetime - self.paused_time
 
