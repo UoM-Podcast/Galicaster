@@ -1,6 +1,7 @@
 import re
 from threading import Timer
 
+from os import path,utime,remove
 import pygst
 pygst.require('0.10')
 import gst
@@ -75,6 +76,8 @@ class QRCodeScanner():
         self.pipeline = None
         self.bins = None
         self.recording_paused = False
+        self.pause_state_file = path.join(context.get_repository().get_rectemp_path(), "paused")
+        print self.pause_state_file
         self.sync_msg_handler = None
         self.msg_pattern = re.compile(ZBAR_MESSAGE_PATTERN)
         # mediapackage modifiers
@@ -143,6 +146,7 @@ class QRCodeScanner():
                     if not self.recording_paused:
                         #print 'PAUSING'
                         recorder.pause_record()
+                        self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
                         self.recorderui.change_state(GC_RECORDING_PAUSED)
                         self.logger.info('Paused recording at {}'.format((timestamp)/NANO2SEC))
@@ -187,6 +191,7 @@ class QRCodeScanner():
         if (self.hold_timestamp-timestamp) < self.hold_timeout_ns:
             #print 'RESUMING {} {}'.format(timestamp, self.hold_timestamp)
             self.recording_paused = False
+            self.write_pause_state(False)
             # Check if the 'recording' has been ended
             if context.get_state().is_recording:
                 recorder.record()  # recorder
@@ -274,3 +279,13 @@ class QRCodeScanner():
     def create_smil(self, mp, occap):
         # TODO: call smil service
         self.logger.info('Create SMIL')
+
+    def write_pause_state(self, state):
+        if state:
+            if path.exists(self.pause_state_file):
+                utime(self.pause_state_file, None)
+            else:
+                open(self.pause_state_file, 'a').close()
+        else:
+            remove(self.pause_state_file)
+
