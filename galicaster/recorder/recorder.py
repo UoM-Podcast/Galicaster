@@ -147,6 +147,8 @@ class Recorder(object):
         a = gst.structure_from_string('letpass')
         event = gst.event_new_custom(gst.EVENT_EOS, a)
         for bin_name, bin in self.bins.iteritems():
+            # make sure valves are open in case pause_record was called last
+            bin.changeValve(False)
             resultado = bin.send_event_to_src(event)
             #if resultado: 
             #    print "EOS sended to src of: " + bin_name

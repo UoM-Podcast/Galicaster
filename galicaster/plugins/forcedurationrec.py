@@ -36,7 +36,7 @@ def init():
     dispatcher.connect('restart-preview', do_stop_timers)
 
 
-def create_timer(sender=None):
+def create_timer(sender=None, recorderui=None):
     global t_stop
     do_stop_timers()
     t_stop = Timer(60 * max_duration, stop_recording) 

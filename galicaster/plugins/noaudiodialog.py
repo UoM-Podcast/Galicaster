@@ -54,7 +54,7 @@ def activate_hidden(button, dialog):
     keep_hidden = True
     dialog.hide() 
 
-def deactivate_hidden_and_check(element=None):
+def deactivate_hidden_and_check(element=None, recorderui=None):
     """
     When a signal is received, deactivate the keep hidden feature and shows dialog if necessary
     """
