@@ -50,9 +50,9 @@ def init():
         # only process sync-messages when recording to reduce overhead
         dispatcher.connect('starting-record', qr.qrcode_connect_to_sync_message)
         dispatcher.connect('recording-closed', qr.qrcode_disconnect_to_sync_message)
-        qr.set_add_edits(conf.get('qrcode', 'mp_add_edits') or False)
-        qr.set_trimhold(conf.get('qrcode', 'mp_force_trimhold') or False)
-        qr.set_add_smil(conf.get('qrcode', 'mp_add_smil') or False)
+        qr.set_add_edits(conf.get_boolean('qrcode', 'mp_add_edits') or False)
+        qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
+        qr.set_add_smil(conf.get_boolean('qrcode', 'mp_add_smil') or False)
         dispatcher.connect('recording-closed', qr.qrcode_update_mediapackage)
         
     except ValueError:
@@ -278,7 +278,7 @@ class QRCodeScanner():
 
     def create_smil(self, mp, occap):
         # TODO: call smil service
-        self.logger.info('Create SMIL')
+        self.logger.info('Create SMIL - disabled')
 
     def write_pause_state(self, state):
         if state:
