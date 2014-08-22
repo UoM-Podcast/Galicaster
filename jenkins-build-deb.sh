@@ -11,7 +11,7 @@ DEBIAN_REPO=/var/www/deb-repos
 # select the galicaster version and the branch tag you want to checkout 
 CLOG=$GITSRC/debian/changelog
 ver=$(head -n1 $CLOG | grep -o "[0-9]*\.[0-9]*\.[0-9]*")
-ds_ver=$(head -n1 $CLOG | grep -o "[0-9]*\.[0-9]*\.[0-9]*-uom[0-9]*")
+ds_ver=$(head -n1 $CLOG | grep -o "[0-9]*\.[0-9]*\.[0-9]*-uom[0-9.]*")
 
 # create a location for the deb build
 rm -rf $SANDBOX/galicaster
