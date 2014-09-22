@@ -95,6 +95,8 @@ def get_mhclient():
                                     multiple_ingest, 
                                     conf.get('ingest', 'workflow'),
                                     conf.get('ingest', 'workflow-parameters'),
+                                    conf.get('heartbeat', 'short'),
+                                    conf.get('heartbeat', 'long'),
                                     get_logger() )
         else:
             mhclient = None
