@@ -60,10 +60,10 @@ class Scheduler(object):
     def do_timers_short(self, sender):
         if self.net:
             pass
-            self.set_state()
+            #self.set_state()
         else:
             pass
-            self.init_client()
+            #self.init_client()
 
 
     def do_timers_long(self, sender):
