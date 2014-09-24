@@ -59,11 +59,12 @@ class Scheduler(object):
 
     def do_timers_short(self, sender):
         if self.net:
-            self.emit('net-up')
             pass
+            self.emit('net-up')
             #self.set_state()
         else:
             pass
+            self.emit('net-up')
             #self.init_client()
 
 
