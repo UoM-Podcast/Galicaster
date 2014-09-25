@@ -46,7 +46,7 @@ class Scheduler(object):
         self.start_timers = dict()
         self.mp_rec = None
         self.last_events = self.init_last_events()
-        self.net = False
+        self.net = True
 
 
     def init_last_events(self):
