@@ -110,11 +110,15 @@ class Scheduler(object):
         if self.ca_status == 'capturing' :
             return
         try:
-            ical_data = self.client.ical()
+            ical_data = self.client.ical
         except:
             self.logger.warning('Problems to connect to matterhorn server ')
             self.net = False
             self.emit('net-down')
+            return
+
+        # no data but no error implies that the calendar has not been modified
+        if ical_data == None:
             return
 
         try:
