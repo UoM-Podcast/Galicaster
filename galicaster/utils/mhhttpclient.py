@@ -132,7 +132,6 @@ class MHHTTPClient(object):
         return self.__call('GET', INIT_ENDPOINT)
 
 
-    @property
     def ical(self):
         icalendar = self.__call('GET', ICAL_ENDPOINT, {'hostname': self.hostname}, headers={'If-None-Match': self.ical_etag})
 
