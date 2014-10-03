@@ -67,9 +67,9 @@ class Scheduler(object):
 
 
     def do_timers_long(self, sender):
-        if self.net:
-            self.proccess_ical()
-            self.emit('after-process-ical')
+        if self.net and self.ca_status != 'capturing':
+            if self.proccess_ical():
+                self.emit('after-process-ical')
         for mp in self.repo.get_next_mediapackages():
             self.create_new_timer(mp)
 
@@ -103,17 +103,21 @@ class Scheduler(object):
             return
 
 
+    # return whether the calendar has changed
     def proccess_ical(self):
         self.logger.info('Proccess ical')
-        if self.ca_status == 'capturing' :
-            return
+
         try:
             ical_data = self.client.ical()
         except:
             self.logger.warning('Problems to connect to matterhorn server ')
             self.net = False
             self.emit('net-down')
-            return
+            return False
+
+        # no data but no error implies that the calendar has not been modified
+        if ical_data == None:
+            return False
 
         try:
             events = ical.get_events_from_string_ical(ical_data)
@@ -121,7 +125,7 @@ class Scheduler(object):
             update_events = ical.get_update_events(self.last_events, events)
         except:
             self.logger.error('Error proccessing ical')
-            return
+            return False
 
         self.repo.save_attach('calendar.ical', ical_data)
         
@@ -147,6 +151,8 @@ class Scheduler(object):
                 self.create_new_timer(mp)
                 
         self.last_events = events
+
+        return True
 
 
     def create_new_timer(self, mp):

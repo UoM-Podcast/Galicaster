@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # Galicaster, Multistream Recorder and Player
 #
-#       galicaster/utils/mhhttpclient
+# galicaster/utils/mhhttpclient
 #
 # Copyright (c) 2011, Teltek Video Research <galicaster@teltek.es>
 #
@@ -27,7 +27,7 @@ SETSTATE_ENDPOINT = '/capture-admin/agents/{hostname}'
 SETCONF_ENDPOINT = '/capture-admin/agents/{hostname}/configuration'
 INGEST_ENDPOINT = '/ingest/addZippedMediaPackage'
 ICAL_ENDPOINT = '/recordings/calendars?agentid={hostname}'
-SERIES_ENDPOINT = '/series/series.json?count={count}' 
+SERIES_ENDPOINT = '/series/series.json?count={count}'
 SERVICE_REGISTRY_ENDPOINT = '/services/available.json?serviceType={serviceType}'
 WORKFLOW_ENDPOINT = '/workflow/instance/{id}.json'
 
@@ -36,8 +36,8 @@ INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 
 
 class MHHTTPClient(object):
-    
-    def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False, 
+
+    def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False,
                  workflow='full', workflow_parameters={'trimHold':'true'}, polling_short=10, polling_long=60, logger=None):
         """
         Arguments:
@@ -68,9 +68,11 @@ class MHHTTPClient(object):
         # FIXME should be long? https://github.com/teltek/Galicaster/issues/114
         self.polling_caps = polling_short
         self.polling_config = polling_short
+        self.response = {'Status-Code': '', 'Content-Type': '', 'ETag': ''}
+        self.ical_etag = -1
 
 
-    def __call(self, method, endpoint, params={}, postfield={}, urlencode=True, server=None, timeout=True):
+    def __call(self, method, endpoint, params={}, postfield={}, urlencode=True, server=None, timeout=True, headers={}):
 
         theServer = server or self.server
         c = pycurl.Curl()
@@ -79,16 +81,22 @@ class MHHTTPClient(object):
         # FOLLOWLOCATION, True used for ssl redirect
         c.setopt(pycurl.FOLLOWLOCATION, True)
         c.setopt(pycurl.CONNECTTIMEOUT, 2)
-        if timeout: 
+        if timeout:
             c.setopt(pycurl.TIMEOUT, 2)
         c.setopt(pycurl.NOSIGNAL, 1)
         c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_DIGEST)
         c.setopt(pycurl.USERPWD, self.user + ':' + self.password)
-        c.setopt(pycurl.HTTPHEADER, ['X-Requested-Auth: Digest'])
+        sendheaders = ['X-Requested-Auth: Digest']
+        if headers:
+            for h, v in headers.iteritems():
+                  sendheaders.append('{}: {}'.format(h, v))
+            # implies we might be interested in passing the response headers
+            c.setopt(pycurl.HEADERFUNCTION, self.scanforetag)
+        c.setopt(pycurl.HTTPHEADER, sendheaders)
         c.setopt(pycurl.USERAGENT, 'Galicaster')
         if (method == 'POST'):
             if urlencode:
-                c.setopt(pycurl.POST, 1) 
+                c.setopt(pycurl.POST, 1)
                 c.setopt(pycurl.POSTFIELDS, urllib.urlencode(postfield))
             else:
                 c.setopt(pycurl.HTTPPOST, postfield)
@@ -99,14 +107,22 @@ class MHHTTPClient(object):
         except:
             raise RuntimeError, 'connect timed out!'
         status_code = c.getinfo(pycurl.HTTP_CODE)
+        self.response['Status-Code'] = status_code
+        self.response['Content-Type'] = c.getinfo(pycurl.CONTENT_TYPE)
         c.close()
-        # client will accept 200 or 302 HTTP codes
-        if not (status_code == 200 or status_code == 302):
+        # client will accept 200, 302 and 304 HTTP codes
+        if not (status_code == 200 or status_code == 302 or status_code == 304):
             if self.logger:
-                self.logger.error('call error in %s, status code {%r}', 
+                self.logger.error('call error in %s, status code {%r}',
                                   theServer + endpoint.format(**params), status_code)
             raise IOError, 'Error in Matterhorn client'
         return b.getvalue()
+
+
+    def scanforetag(self, buffer):
+        if buffer.startswith('ETag:'):
+            etag = buffer[5:]
+            self.response['ETag'] = etag.strip()
 
 
     def whoami(self):
@@ -116,8 +132,19 @@ class MHHTTPClient(object):
         return self.__call('GET', INIT_ENDPOINT)
 
 
+    @property
     def ical(self):
-        return self.__call('GET', ICAL_ENDPOINT, {'hostname': self.hostname})
+        icalendar = self.__call('GET', ICAL_ENDPOINT, {'hostname': self.hostname}, headers={'If-None-Match': self.ical_etag})
+
+        if self.response['Status-Code'] == 304:
+            if self.logger:
+                self.logger.info("iCal Not modified")
+            return None
+
+        self.ical_etag = self.response['ETag']
+        if self.logger:
+                self.logger.info("iCal modified")
+        return icalendar
 
 
     def setstate(self, state):
@@ -126,7 +153,7 @@ class MHHTTPClient(object):
         """
         pass
         #return self.__call('POST', SETSTATE_ENDPOINT, {'hostname': self.hostname},
-                           #{'address': self.address, 'state': state})
+        #{'address': self.address, 'state': state})
 
 
     def setrecordingstate(self, recording_id, state):
@@ -147,7 +174,7 @@ class MHHTTPClient(object):
         client_conf = {
             'service.pid': 'galicaster',
             'capture.confidence.debug': 'false',
-            'capture.confidence.enable': 'false',            
+            'capture.confidence.enable': 'false',
             'capture.config.remote.polling.interval': self.polling_config,
             'capture.agent.name': self.hostname,
             'capture.agent.state.remote.polling.interval': self.polling_state,
@@ -156,7 +183,7 @@ class MHHTTPClient(object):
             'capture.recording.shutdown.timeout': '60',
             'capture.recording.state.remote.endpoint.url': self.server + '/capture-admin/recordings',
             'capture.schedule.event.drop': 'false',
-            'capture.schedule.remote.polling.interval': int(self.polling_schedule)/60,
+            'capture.schedule.remote.polling.interval': int(self.polling_schedule) / 60,
             'capture.schedule.event.buffertime': '1',
             'capture.schedule.remote.endpoint.url': self.server + '/recordings/calendars',
             'capture.schedule.cache.url': '/opt/matterhorn/storage/cache/schedule.ics',
@@ -171,8 +198,8 @@ class MHHTTPClient(object):
             'org.opencastproject.server.url': 'http://172.20.209.88:8080',
             'org.opencastproject.capture.core.url': self.server,
             'capture.max.length': '28800'
-            }
-        
+        }
+
         client_conf.update(capture_devices)
 
         xml = ""
@@ -203,7 +230,7 @@ class MHHTTPClient(object):
         if self.logger:
             self.logger.debug('Looking up Matterhorn endpoint for %s', service_type)
         services = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {'serviceType': service_type}, {},
-                              True, None, True)
+                               True, None, True)
         services = json.loads(services)
         return services['services']['service']
 
@@ -226,13 +253,13 @@ class MHHTTPClient(object):
         return the admin node to ingest to, This is verified by the IP address so 
         we can meke sure that it doesn't come up through a DNS alias, If all ingest 
         services are offline the ingest will still fall back to the server provided 
-        to Galicaster as then None will be returned by get_ingest_server  """   
-    
+        to Galicaster as then None will be returned by get_ingest_server  """
+
         p = '(?:http.*://)?(?P<host>[^:/ ]+).?(?P<port>[0-9]*).*'
-        m = re.search(p,server['host'])
-        host=m.group('host')
-        m = re.search(p,self.server)
-        adminHost=m.group('host')
+        m = re.search(p, server['host'])
+        host = m.group('host')
+        m = re.search(p, self.server)
+        adminHost = m.group('host')
         if (not server['online']):
             return False
         if (server['maintenance']):
@@ -248,23 +275,23 @@ class MHHTTPClient(object):
         """ get the ingest server information from the admin node: 
         if there are more than one ingest servers the first from the list will be used
         as they are returned in order of their load, if there is only one returned this 
-        will be the admin node, so we can use the information we already have """ 
-        servers = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {'serviceType':'org.opencastproject.ingest'}, {}, 
+        will be the admin node, so we can use the information we already have """
+        servers = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {'serviceType': 'org.opencastproject.ingest'}, {},
                               True, None, True)
         servers_avail = json.loads(servers)
         all_servers = servers_avail['services']['service']
         if type(all_servers) is list:
             for serv in all_servers:
                 if self.verify_ingest_server(serv):
-                    return str(serv['host']) # Returns least loaded served
+                    return str(serv['host'])  # Returns least loaded served
         if self.verify_ingest_server(all_servers):
-            return str(all_servers['host']) # There's only one server
-        return None # it will use the admin server
- 
+            return str(all_servers['host'])  # There's only one server
+        return None  # it will use the admin server
+
     def ingest(self, mp_file, workflow=None, workflow_instance=None, workflow_parameters=None):
         postdict = self._prepare_ingest(mp_file, workflow, workflow_instance, workflow_parameters)
         server = self.server if not self.multiple_ingest else self.get_ingest_server()
-        self.logger.info( 'Ingesting to Server {0}'.format(server) ) 
+        self.logger.info('Ingesting to Server {0}'.format(server))
         return self.__call('POST', INGEST_ENDPOINT, {}, postdict.items(), False, server, False)
 
 
