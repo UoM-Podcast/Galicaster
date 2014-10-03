@@ -46,7 +46,7 @@ class Scheduler(object):
         self.start_timers = dict()
         self.mp_rec = None
         self.last_events = self.init_last_events()
-        self.net = True
+        self.net = False
 
 
     def init_last_events(self):
@@ -63,9 +63,7 @@ class Scheduler(object):
             self.emit('net-up')
             #self.set_state()
         else:
-            pass
-            self.emit('net-up')
-            #self.init_client()
+            self.init_client()
 
 
     def do_timers_long(self, sender):

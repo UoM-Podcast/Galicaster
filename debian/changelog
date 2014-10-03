@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom3.4) precise; urgency=low
+galicaster (1.3.2-uom3.5) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,8 @@ galicaster (1.3.2-uom3.4) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Changed, use calendar endpoint ETag to reduce server load
+  * changed, revert calling init endpoint
   * changed, temp modification to stop setstate calls in mhhttpclient
   * changed, temp modification to stop mh polling
   * Fixed, configuration sends actual polling frequency
