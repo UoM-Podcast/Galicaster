@@ -137,9 +137,13 @@ class MHHTTPClient(object):
         icalendar = self.__call('GET', ICAL_ENDPOINT, {'hostname': self.hostname}, headers={'If-None-Match': self.ical_etag})
 
         if self.response['Status-Code'] == 304:
+            if self.logger:
+                self.logger.info("iCal Not modified")
             return None
 
         self.ical_etag = self.response['ETag']
+        if self.logger:
+                self.logger.info("iCal modified")
         return icalendar
 
 
