@@ -1,8 +1,6 @@
 __author__ = 'andrew wilson'
 
-import time
 from galicaster.core import context
-from galicaster.mediapackage import mediapackage
 import collections
 
 logger = context.get_logger()
@@ -10,42 +8,41 @@ conf = context.get_conf()
 mhclient = context.get_mhclient()
 repo = context.get_repository()
 
-check_after = conf.get_int('checkdupes', 'check_after') or 2 #300
-last_checked = time.time()
-
-logger.debug('check_after set to %i', check_after)
+check_exists = conf.get_boolean('checkdupes', 'check_exists') or True
 
 
 def init():
     try:
         dispatcher = context.get_dispatcher()
-        dispatcher.connect('galicaster-notify-timer-short', checkdupes)
+        dispatcher.connect('galicaster-notify-timer-long', checkdupes)
     except ValueError:
         pass
 
+
+def instance_exists(mp):
+    try:
+        return mhclient.search_by_mp_id(mp)
+    except IOError:
+        return False
+
+
 def checkdupes(sender=None):
-    global last_checked
-
-    # only run if it is time
-    if (last_checked + check_after) >= time.time():
-        return
-
-    worker = context.get_worker()
-    ham = {}
+    mp_dates = {}
     for mp_id, mp in repo.iteritems():
-        ham[mp_id] = str(mp.getDate())
-    print ham
-    for x in get_repeated_values(ham):
-        print x
+        mp_dates[mp_id] = str(mp.getDate())
+    value_occurrences = collections.Counter(mp_dates.values())
+    for ti, count in value_occurrences.items():
+        if count > 1:
+            print 'mediapackages with identical start times found'
+            dupe_time = ti
+            for i, t in mp_dates.items():
+                if t == dupe_time:
+                    if check_exists and instance_exists(i) is False:
+                        print 'workflow {} not found in matterhorn deleting mp {}'.format(i, repo.get(i).getURI())
+                        repo.delete(repo.get(i))
+                    elif check_exists is False:
+                        # FIXME working on the assumption that the repo will be updated with correct mps
+                        print 'deleting all mps with same start times {}'.format(i, repo.get(i).getURI())
+                        repo.delete(repo.get(i))
 
-def get_repeated_values(sessions):
-    known = set()
-    already_repeated = set()
-    for lst in sessions.itervalues():
-        session_set = set(tuple(x) for x in lst)
-        repeated = (known & session_set) - already_repeated
-        already_repeated |= repeated
-        known |= session_set
-        for val in repeated:
-            yield val
 
