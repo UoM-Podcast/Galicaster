@@ -14,7 +14,7 @@ check_exists = conf.get_boolean('checkdupes', 'check_exists') or True
 def init():
     try:
         dispatcher = context.get_dispatcher()
-        dispatcher.connect('galicaster-notify-timer-long', checkdupes)
+        dispatcher.connect('after-process-ical', checkdupes)
     except ValueError:
         pass
 
