@@ -33,16 +33,16 @@ def checkdupes(sender=None):
     value_occurrences = collections.Counter(mp_dates.values())
     for ti, count in value_occurrences.items():
         if count > 1:
-            print 'mediapackages with identical start times found'
+            logger.info('mediapackages with identical start times found')
             dupe_time = ti
             for i, t in mp_dates.items():
                 if t == dupe_time:
                     if check_exists and instance_exists(i) is False:
-                        print 'workflow {} not found in matterhorn deleting mp {}'.format(i, repo.get(i).getURI())
+                        logger.info('workflow {} not found in matterhorn deleting mp {}'.format(i, repo.get(i).getURI()))
                         repo.delete(repo.get(i))
                     elif check_exists is False:
                         # FIXME working on the assumption that the repo will be updated with correct mps
-                        print 'deleting all mps with same start times {}'.format(i, repo.get(i).getURI())
+                        logger.info('deleting all mps with same start times {}'.format(i, repo.get(i).getURI()))
                         repo.delete(repo.get(i))
 
 
