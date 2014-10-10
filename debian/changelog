@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom3.6) precise; urgency=low
+galicaster (1.3.2-uom3.7) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,7 @@ galicaster (1.3.2-uom3.6) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Fixed, retryingest plugin to obey config parameters
   * checkdupes plugin added
   * Changed, use calendar endpoint ETag to reduce server load
   * changed, revert calling init endpoint
