@@ -30,14 +30,15 @@ conf = context.get_conf()
 mhclient = context.get_mhclient()
 repo = context.get_repository()
 
-check_ingested = conf.get_boolean('retryingest', 'check_ingested') or True
+check_ingested = conf.get_boolean('retryingest', 'check_ingested')
 check_after = conf.get_int('retryingest', 'check_after') or 300
-check_nightly = conf.get_boolean('retryingest', 'nightly') or True
+check_nightly = conf.get_boolean('retryingest', 'nightly')
+
 last_checked = time.time()
 
 logger.debug('check_ingested set to %s', check_ingested)
 logger.debug('check_after set to %i', check_after)
-logger.debug('check_after set to %s', check_nightly)
+logger.debug('check_nightly set to %s', check_nightly)
 
 def init():
     try:
@@ -68,9 +69,8 @@ def reingest(sender=None):
 
     worker = context.get_worker()
     for mp_id, mp in repo.iteritems():
-        logger.debug('reingest checking: %s status: %s',
-                     mp_id, mediapackage.op_status[mp.getOpStatus('ingest')])
         if not (mp.status == mediapackage.SCHEDULED or mp.status == mediapackage.RECORDING):
+            logger.debug('reingest checking: %s status: %s', mp_id, mediapackage.op_status[mp.getOpStatus('ingest')])
             if mp.getOpStatus('ingest') == mediapackage.OP_FAILED or mp.getOpStatus('ingest') == mediapackage.OP_IDLE:
                 # check mediapackage status on matterhorn if needed
                 if (check_ingested and not has_ingested(mp_id, mp)) or not check_ingested:
