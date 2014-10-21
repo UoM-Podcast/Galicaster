@@ -20,17 +20,27 @@ mkdir -p $SANDBOX/galicaster
 # get a clean copy of the code
 cd ${GITSRC}
 rm $SANDBOX/galicaster_${ver}.orig.*
-git archive $TAG --format=tar --output=$SANDBOX/galicaster_${ver}.orig.tar
-gzip $SANDBOX/galicaster_${ver}.orig.tar
-cd $SANDBOX/galicaster
 
-# unpack galicaster tarball to sandbox/galicaster
-tar zxvf $SANDBOX/galicaster_${ver}.orig.tar.gz
+if git archive $TAG --format=tar --output=$SANDBOX/galicaster_${ver}.orig.tar
+then
+    gzip $SANDBOX/galicaster_${ver}.orig.tar
+    cd $SANDBOX/galicaster
 
-# Build the package
-dpkg-buildpackage -d
+    # unpack galicaster tarball to sandbox/galicaster
+    tar zxvf $SANDBOX/galicaster_${ver}.orig.tar.gz
 
-# update the repo
-sudo cp $SANDBOX/galicaster_${ds_ver}_all.deb $DEBIAN_REPO/$RELEASE/all
-cd $DEBIAN_REPO/$RELEASE
-sudo sh -c 'dpkg-scanpackages all > all/Packages.gz'
+    # Build the package
+    if dpkg-buildpackage -uc -us -d
+    then
+        # update the repo
+        sudo cp $SANDBOX/galicaster_${ds_ver}_all.deb $DEBIAN_REPO/$RELEASE/all
+        cd $DEBIAN_REPO/$RELEASE
+        sudo sh -c 'dpkg-scanpackages all > all/Packages.gz'
+    else
+        echo "dpkg buildpackage failed to create deb"
+        return $?
+    fi
+else
+    echo "Git failed to create archive of $TAG"
+    return $?
+fi
