@@ -49,7 +49,8 @@ def init():
 
 def has_ingested(mp_id, mp):
     # check if the mediapackage is published to the search index
-    search_result = mhclient.search_by_mp_id(mp_id)
+    search_result = mhclient.search_by_mp_id(mp_id)['workflow']['operations']['operation'][2]
+    print mhclient.search_by_mp_id(mp_id)['workflow']['state']
     if search_result['id'] == 'ingest' and search_result['state'] == 'SUCCEEDED':
         logger.debug('mediapackage %s has already been ingested', mp_id)
         # mediapackage with workflow id has actually been ingested successfully at some point
@@ -59,6 +60,8 @@ def has_ingested(mp_id, mp):
     logger.debug('mediapackage %s has not been ingested', mp_id)
     return False
 
+#def has_succeeded()
+   # print
 
 def reingest(sender=None):
     global last_checked

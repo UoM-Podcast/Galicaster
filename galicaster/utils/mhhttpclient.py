@@ -244,7 +244,7 @@ class MHHTTPClient(object):
         workflow_server = self._get_workflow_server()
         result = self.__call('GET', WORKFLOW_ENDPOINT, {'id': mp_id}, {}, True, workflow_server, True)
         search_result = json.loads(result)
-        return search_result['workflow']['operations']['operation'][2]
+        return search_result
 
 
     def verify_ingest_server(self, server):
