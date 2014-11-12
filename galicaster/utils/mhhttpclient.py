@@ -82,7 +82,7 @@ class MHHTTPClient(object):
         c.setopt(pycurl.FOLLOWLOCATION, True)
         c.setopt(pycurl.CONNECTTIMEOUT, 2)
         if timeout:
-            c.setopt(pycurl.TIMEOUT, 2)
+            c.setopt(pycurl.TIMEOUT, 10)
         c.setopt(pycurl.NOSIGNAL, 1)
         c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_DIGEST)
         c.setopt(pycurl.USERPWD, self.user + ':' + self.password)
