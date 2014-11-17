@@ -45,7 +45,7 @@ last_checked = time.time()
 logger.debug('check_ingested set to %s', check_ingested)
 logger.debug('check_after set to %i', check_after)
 logger.debug('check_nightly set to %s', check_nightly)
-
+logger.debug('check_state set to %s', check_state)
 
 def init():
     try:
@@ -79,10 +79,13 @@ def has_succeeded(mp_id, mp):
     else:
         if mp.getOpStatus('ingest') == mediapackage.OP_DONE:
             # check for the current mediapackage workflow state
-            workflow_state = mhclient.search_by_mp_id(mp_id)['workflow']['state']
+            try:
+                workflow_state = mhclient.search_by_mp_id(mp_id)['workflow']['state']
+            except IOError:
+                return True
             logger.debug('mp {0}. mhorn state: {1}'.format(mp_id, workflow_state))
             if workflow_state == 'FAILED':
-                logger.info('mp {} : workflow failed, marking for re-ingest'.format(mp_id))
+                logger.info('mp {} : Workflow Failed'.format(mp_id))
                 mp.addAttachmentAsString('#' + workflow_state, 'workflow.status', False, 'workflow.status')
                 mp.setOpStatus('ingest', mediapackage.OP_FAILED)
                 repo.update(mp)
@@ -100,7 +103,7 @@ def reingest(sender=None):
     for mp_id, mp in repo.iteritems():
         if not (mp.status == mediapackage.SCHEDULED or mp.status == mediapackage.RECORDING):
             if check_state and not has_succeeded(mp_id, mp):
-                logger.info('scheduled nightly re-ingest of mp with failed workflow: %s', mp_id)
+                logger.info('Set mediapackage to Failed: Failed Workflow: %s', mp_id)
             logger.debug('reingest checking: %s status: %s', mp_id, mediapackage.op_status[mp.getOpStatus('ingest')])
             if mp.getOpStatus('ingest') == mediapackage.OP_FAILED or mp.getOpStatus('ingest') == mediapackage.OP_IDLE:
                 # check mediapackage status on matterhorn if needed
