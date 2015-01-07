@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom3.9) precise; urgency=low
+galicaster (1.3.2-uom4.0) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,7 @@ galicaster (1.3.2-uom3.9) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Enhancement, randomise ingest server and stopping ingest to the admin node now options
   * Enhancement, retryingest plugin
   * Changed, mhhttpclient timeout to 10s
   * Fixed, retryingest plugin to obey config parameters
