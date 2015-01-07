@@ -15,6 +15,7 @@ import re
 import json
 import urllib
 import socket
+import random
 #IDEA use cStringIO to improve performance
 from StringIO import StringIO
 import pycurl
@@ -38,7 +39,8 @@ INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 class MHHTTPClient(object):
 
     def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False,
-                 workflow='full', workflow_parameters={'trimHold':'true'}, polling_short=10, polling_long=60, logger=None):
+                 random_ingest=False, ingest_to_admin=True, workflow='full', workflow_parameters={'trimHold':'true'},
+                 polling_short=10, polling_long=60, logger=None):
         """
         Arguments:
 
@@ -56,6 +58,8 @@ class MHHTTPClient(object):
         self.hostname = hostname
         self.address = address or socket.gethostbyname(socket.gethostname())
         self.multiple_ingest = multiple_ingest
+        self.random_ingest = random_ingest
+        self.ingest_to_admin = ingest_to_admin
         self.workflow = workflow
         self.logger = logger
         if isinstance(workflow_parameters, basestring):
@@ -280,11 +284,20 @@ class MHHTTPClient(object):
         servers_avail = json.loads(servers)
         all_servers = servers_avail['services']['service']
         if type(all_servers) is list:
+            if self.random_ingest:
+                    attempt = 0
+                    while attempt < 10:
+                        result = random.choice(all_servers)
+                        if self.verify_ingest_server(result):
+                            return str(result['host'])
+                        attempt += 1
             for serv in all_servers:
                 if self.verify_ingest_server(serv):
                     return str(serv['host'])  # Returns least loaded served
         if self.verify_ingest_server(all_servers):
             return str(all_servers['host'])  # There's only one server
+        if not self.ingest_to_admin:
+            raise ValueError("Ingest nodes are currently unavailable")
         return None  # it will use the admin server
 
     def ingest(self, mp_file, workflow=None, workflow_instance=None, workflow_parameters=None):

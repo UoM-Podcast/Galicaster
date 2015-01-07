@@ -171,7 +171,8 @@ class Worker(object):
                 self.logger.info("Finalized Ingest for MP {0}".format(mp.getIdentifier()))
                 mp.setOpStatus('ingest',mediapackage.OP_DONE)
                 self.dispatcher.emit('stop-operation', 'ingest', mp, True)
-            except:
+            except ValueError as e:
+                self.logger.debug(e)
                 self.logger.error("Failed Ingest for MP {0}".format(mp.getIdentifier()))
                 mp.setOpStatus("ingest",mediapackage.OP_FAILED)
                 self.dispatcher.emit('stop-operation', 'ingest', mp, False)
@@ -192,7 +193,8 @@ class Worker(object):
                 self.logger.info("Finalized Ingest for MP {0}".format(mp.getIdentifier()))
                 mp.setOpStatus("ingest",mediapackage.OP_DONE)
                 self.dispatcher.emit('stop-operation', 'ingest', mp, True)
-            except:
+            except ValueError as e:
+                self.logger.debug(e)
                 self.logger.error("Failed Ingest for MP {0}".format(mp.getIdentifier()))
                 mp.setOpStatus("ingest",mediapackage.OP_FAILED)
                 self.dispatcher.emit('stop-operation', 'ingest', mp, False)

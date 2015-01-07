@@ -85,19 +85,23 @@ def get_mhclient():
     """
     if 'mhclient' not in __galicaster_context:
         conf = get_conf()
-        multiple_ingest  = conf.get_boolean('ingest','multiple-ingest') or False
+        multiple_ingest = conf.get_boolean('ingest', 'multiple-ingest') or False
+        random_ingest = conf.get_boolean('ingest', 'random-ingest') or False
+        ingest_to_admin = conf.get_boolean('ingest', 'ingest-to-admin')
         if get_conf().get_boolean("ingest", "active"):
             mhclient = MHHTTPClient(conf.get('ingest', 'host'), 
                                     conf.get('ingest', 'username'), 
                                     conf.get('ingest', 'password'), 
                                     conf.hostname, 
                                     conf.get('ingest', 'address'),
-                                    multiple_ingest, 
+                                    multiple_ingest,
+                                    random_ingest,
+                                    ingest_to_admin,
                                     conf.get('ingest', 'workflow'),
                                     conf.get('ingest', 'workflow-parameters'),
                                     conf.get('heartbeat', 'short'),
                                     conf.get('heartbeat', 'long'),
-                                    get_logger() )
+                                    get_logger())
         else:
             mhclient = None
         __galicaster_context['mhclient'] = mhclient
