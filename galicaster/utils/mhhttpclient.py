@@ -29,6 +29,7 @@ SETCONF_ENDPOINT = '/capture-admin/agents/{hostname}/configuration'
 INGEST_ENDPOINT = '/ingest/addZippedMediaPackage'
 ICAL_ENDPOINT = '/recordings/calendars?agentid={hostname}'
 SERIES_ENDPOINT = '/series/series.json?count={count}'
+SERIES_IDV_ENDPOINT = '/series/{id}.json'
 SERVICE_REGISTRY_ENDPOINT = '/services/available.json?serviceType={serviceType}'
 WORKFLOW_ENDPOINT = '/workflow/instance/{id}.json'
 
@@ -311,3 +312,10 @@ class MHHTTPClient(object):
         """ Get all series upto 100"""
         # TODO No limit, to get all
         return self.__call('GET', SERIES_ENDPOINT, {'count': 100})
+
+
+    def get_single_series(self, series_id):
+        """returns a dict of the series identifier and title for a single series"""
+        series_call = self.__call('GET', SERIES_IDV_ENDPOINT, {'id': series_id})
+        series_result = json.loads(series_call)
+        return series_result['http://purl.org/dc/terms/']
