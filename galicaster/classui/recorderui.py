@@ -443,7 +443,8 @@ class RecorderClassUI(gtk.Box):
         elif self.status in [ GC_RECORDING, GC_PAUSED, GC_RECORDING_PAUSED ] :
 
             if self.allow_overlap:
-                pass
+                logger.info('Recording Conflict. skipping scheduled mp {}'.format(identifier))
+                return
                 # TODO: dont stop and extend recording until the end of the new interval
                 # In case of stop, restart with the overlapped job
 
