@@ -23,6 +23,7 @@ from galicaster.recorder import module_register
 
 pipestr = (' v4l2src name=gc-v4l2-src ! capsfilter name=gc-v4l2-filter ! queue ! gc-v4l2-dec '
            ' videorate ! ffmpegcolorspace ! capsfilter name=gc-v4l2-vrate ! videocrop name=gc-v4l2-crop ! '
+           ' videobalance name=gc-v4l2-bright brightness=0.0 ! videobalance name=gc-v4l2-cont contrast=1.0 ! '
            ' tee name=gc-v4l2-tee  ! queue !  xvimagesink async=false sync=false qos=false name=gc-v4l2-preview'
            ' gc-v4l2-tee. ! queue ! valve drop=false name=gc-v4l2-valve ! ffmpegcolorspace ! queue ! '
            ' gc-v4l2-enc ! queue ! gc-v4l2-mux ! '
@@ -129,6 +130,14 @@ class GCv4l2(gst.Bin, base.Base):
         self.add(bin)
 
         self.set_option_in_pipeline('location', 'gc-v4l2-src', 'device')
+
+        if "brightness" in self.options:
+            ampli = self.get_by_name("gc-v4l2-bright")
+            ampli.set_property("brightness", float(self.options["brightness"]))
+
+        if "contrast" in self.options:
+            ampli = self.get_by_name("gc-v4l2-cont")
+            ampli.set_property("contrast", float(self.options["contrast"]))
 
         self.set_value_in_pipeline(path.join(self.options['path'], self.options['file']), 'gc-v4l2-sink', 'location')
 
