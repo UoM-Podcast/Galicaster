@@ -13,6 +13,7 @@ conf = context.get_conf()
 
 dev_id = '17a00101'
 profile = 'test-loopback'
+normal_profile = 'test-loopback-usb'
 
 def init():
     try:
@@ -31,18 +32,20 @@ def get_device():
 
 
 def profile_failover(sender=None):
-    is_device = get_device()
-    print is_device
     #if (error_message.startswith("Internal GStreamer error: negotiation problem") or
        #(error_message.startswith("GStreamer encountered a general resource error. (pulsesrc.c") and
        #os.path.isfile("/var/www/no_mic") is False)):
-    current_profile = conf.get_current_profile().name
-    print current_profile
-    if current_profile != profile and is_device is False:
-        print 'ham'
-        conf.change_current_profile(profile)
-        conf.update()
-        context.get_dispatcher().emit("reload-profile")
-         #logger.info("GStreamer error: " + error_message)
-         #logger.info("killing Galicaster")
-         #os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
+    if context.get_state().is_recording is False:
+        is_device = get_device()
+        current_profile = conf.get_current_profile().name
+        if current_profile != profile and (is_device is False):
+            conf.change_current_profile(profile)
+            conf.update()
+            context.get_dispatcher().emit("reload-profile")
+        if current_profile != normal_profile and (is_device is True):
+            conf.change_current_profile(normal_profile)
+            conf.update()
+            context.get_dispatcher().emit("reload-profile")
+             #logger.info("GStreamer error: " + error_message)
+             #logger.info("killing Galicaster")
+             #os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
