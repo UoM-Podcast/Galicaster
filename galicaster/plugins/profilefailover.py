@@ -32,6 +32,7 @@ def get_device():
 
 def add_failover_pipeline():
     #! textoverlay text='Microphone Disconnected' font-desc="Arial 10" outline-color=0  halign=right valign=top ! decodebin !
+    pass
 
 def profile_failover(sender=None):
     #if (error_message.startswith("Internal GStreamer error: negotiation problem") or
