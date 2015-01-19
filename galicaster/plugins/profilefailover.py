@@ -41,8 +41,8 @@ class DeviceRemovalProfileFailover():
             is_device = self.get_device()
             current_profile = self.conf.get_current_profile().name
             if current_profile != self.profile and (is_device is False):
-                self.logger.info('USB device used with Galicaster has been disconnected, '
-                                 'switching to profile {}'.format(self.profile))
+                self.logger.warning('USB device used with Galicaster has been disconnected, '
+                                    'switching to profile {}'.format(self.profile))
                 self.conf.change_current_profile(self.profile)
                 self.conf.update()
                 context.get_dispatcher().emit("reload-profile")
