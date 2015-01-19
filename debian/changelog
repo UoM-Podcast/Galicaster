@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom4.3) precise; urgency=low
+galicaster (1.3.2-uom4.4) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,9 @@ galicaster (1.3.2-uom4.3) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Changed, config can now be located in home directory under .galicaster/
+  * Enhancement, textoverlay option now in v4l2 and blackmagic bins
+  * profilefailover plugin added
   * Enhancement, changing brigness and contrast
   * Fixed, if mps with identical start times do not restart recording
   * Changemp plugin added
