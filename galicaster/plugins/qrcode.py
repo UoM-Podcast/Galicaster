@@ -77,7 +77,7 @@ class QRCodeScanner():
         self.bins = None
         self.recording_paused = False
         self.pause_state_file = path.join(context.get_repository().get_rectemp_path(), "paused")
-        print self.pause_state_file
+        #print self.pause_state_file
         self.sync_msg_handler = None
         self.msg_pattern = re.compile(ZBAR_MESSAGE_PATTERN)
         # mediapackage modifiers
