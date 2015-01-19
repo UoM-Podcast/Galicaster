@@ -20,10 +20,12 @@ from os import path
 
 from galicaster.recorder import base
 from galicaster.recorder import module_register
+from galicaster.core import context
 
 pipestr = (' v4l2src name=gc-v4l2-src ! capsfilter name=gc-v4l2-filter ! queue ! gc-v4l2-dec '
            ' videorate ! ffmpegcolorspace ! capsfilter name=gc-v4l2-vrate ! videocrop name=gc-v4l2-crop ! '
            ' videobalance name=gc-v4l2-bright brightness=0.0 ! videobalance name=gc-v4l2-cont contrast=1.0 ! '
+           ' textoverlay name=gc-v4l2-text ! '
            ' tee name=gc-v4l2-tee  ! queue !  xvimagesink async=false sync=false qos=false name=gc-v4l2-preview'
            ' gc-v4l2-tee. ! queue ! valve drop=false name=gc-v4l2-valve ! ffmpegcolorspace ! queue ! '
            ' gc-v4l2-enc ! queue ! gc-v4l2-mux ! '
@@ -132,18 +134,28 @@ class GCv4l2(gst.Bin, base.Base):
         self.set_option_in_pipeline('location', 'gc-v4l2-src', 'device')
 
         if "brightness" in self.options:
-            ampli = self.get_by_name("gc-v4l2-bright")
-            ampli.set_property("brightness", float(self.options["brightness"]))
+            brig = self.get_by_name("gc-v4l2-bright")
+            brig.set_property("brightness", float(self.options["brightness"]))
 
         if "contrast" in self.options:
-            ampli = self.get_by_name("gc-v4l2-cont")
-            ampli.set_property("contrast", float(self.options["contrast"]))
+            cont = self.get_by_name("gc-v4l2-cont")
+            cont.set_property("contrast", float(self.options["contrast"]))
+
+        if "textoverlay" in self.options:
+            text_ops = self.options["textoverlay"]
+            text_ops = dict(item.split("=") for item in text_ops.split(","))
+            text = self.get_by_name("gc-v4l2-text")
+            for opts, vals in text_ops.iteritems():
+                if opts == 'outline-color':
+                    text.set_property(opts, int(vals))
+                else:
+                    text.set_property(opts, vals)
 
         self.set_value_in_pipeline(path.join(self.options['path'], self.options['file']), 'gc-v4l2-sink', 'location')
 
         self.set_option_in_pipeline('caps', 'gc-v4l2-filter', 'caps', gst.Caps)
         fr = re.findall("framerate *= *[0-9]+/[0-9]+", self.options['caps'])
-        if fr:            
+        if fr:
             newcaps = 'video/x-raw-yuv,' + fr[0]
             self.set_value_in_pipeline(newcaps, 'gc-v4l2-vrate', 'caps', gst.Caps)
 

@@ -23,6 +23,8 @@ from galicaster.recorder import module_register
 videostr = ( ' decklinksrc connection=sdi mode=12 name=gc-blackmagic-src ! '
              ' identity name=gc-blackmagic-idvideo ! videorate ! gc-blackmagic-capsfilter !'
              ' queue ! videocrop name=gc-blackmagic-crop ! '
+             ' videobalance name=gc-blackmagic-bright brightness=0.0 ! videobalance name=gc-blackmagic-cont contrast=1.0 ! '
+             ' textoverlay name=gc-blackmagic-text ! '
              ' tee name=gc-blackmagic-tee  ! queue ! ffmpegcolorspace ! xvimagesink async=false sync=false name=gc-blackmagic-preview'
              #REC VIDEO
              ' gc-blackmagic-tee. ! queue ! valve drop=false name=gc-blackmagic-valve ! ffmpegcolorspace ! '
@@ -263,6 +265,24 @@ class GCblackmagic(gst.Bin, base.Base):
         for pos in ['right','left','top','bottom']:
             element = self.get_by_name('gc-blackmagic-crop')
             element.set_property(pos, int(self.options['videocrop-' + pos]))
+
+        if "brightness" in self.options:
+            brig = self.get_by_name("gc-blackmagic-bright")
+            brig.set_property("brightness", float(self.options["brightness"]))
+
+        if "contrast" in self.options:
+            cont = self.get_by_name("gc-blackmagic-cont")
+            cont.set_property("contrast", float(self.options["contrast"]))
+
+        if "textoverlay" in self.options:
+            text_ops = self.options["textoverlay"]
+            text_ops = dict(item.split("=") for item in text_ops.split(","))
+            text = self.get_by_name("gc-blackmagic-text")
+            for opts, vals in text_ops.iteritems():
+                if opts == 'outline-color':
+                    text.set_property(opts, int(vals))
+                else:
+                    text.set_property(opts, vals)
 
   def changeValve(self, value):
     valve1=self.get_by_name('gc-blackmagic-valve')

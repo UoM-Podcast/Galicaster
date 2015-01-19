@@ -21,9 +21,11 @@ YES = ['true', 'yes', 'ok', 'si', 'y']
 
 class Conf(object): # TODO list get and other ops arround profile
 
-   def __init__(self, conf_file='/etc/galicaster/conf.ini', 
+   def __init__(self, conf_file='/etc/galicaster/conf.ini',
+                conf_file_user=os.getenv('HOME') + '/.galicaster/conf.ini',
                 conf_dist_file=None, 
-                profile_folder='/etc/galicaster/profiles'):
+                profile_folder='/etc/galicaster/profiles',
+                profile_folder_user=os.getenv('HOME') + '/.galicaster/profiles'):
       self.__conf = ConfigParser.ConfigParser() 
       self.__user_conf = ConfigParser.ConfigParser() 
       self.__profiles = {}
@@ -31,11 +33,13 @@ class Conf(object): # TODO list get and other ops arround profile
       self.__current_profile = None
       
       # FIXME when using 2.7 dict_type=collections.OrderedDict)
-      self.conf_file = (conf_file if os.path.isfile(conf_file) else 
+      self.conf_file = (conf_file_user if os.path.isfile(conf_file_user) else
+                        conf_file if os.path.isfile(conf_file) else
                         os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'conf.ini')))
       self.conf_dist_file = (conf_dist_file or 
                              os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','conf-dist.ini')))
-      self.profile_folder = (profile_folder if os.path.isdir(profile_folder) else 
+      self.profile_folder = (profile_folder_user if os.path.isdir(profile_folder_user) else
+                             profile_folder if os.path.isdir(profile_folder) else
                              os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'profiles')))
 
       self.logger = None         
