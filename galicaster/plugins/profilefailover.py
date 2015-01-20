@@ -9,7 +9,7 @@ def init():
     try:
         conf = context.get_conf()
         dev_id = conf.get('profilefailover', 'usb-device') or '17a00101'
-        profile = conf.get('profilefailover', 'failover-profile') or 'Default'
+        profile = conf.get('profilefailover', 'failover-profile') or conf.get_current_profile().name
         normal_profile = conf.get('profilefailover', 'normal-profile') or conf.get('basic', 'profile') or 'Default'
         pf = DeviceRemovalProfileFailover(dev_id, profile, normal_profile, conf, context.get_logger())
 
