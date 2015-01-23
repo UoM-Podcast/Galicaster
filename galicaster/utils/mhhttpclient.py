@@ -155,9 +155,8 @@ class MHHTTPClient(object):
         """
         Los posibles estados son: shutting_down, capturing, uploading, unknown, idle
         """
-        pass
-        #return self.__call('POST', SETSTATE_ENDPOINT, {'hostname': self.hostname},
-        #{'address': self.address, 'state': state})
+        return self.__call('POST', SETSTATE_ENDPOINT, {'hostname': self.hostname},
+                           {'address': self.address, 'state': state})
 
 
     def setrecordingstate(self, recording_id, state):
@@ -165,8 +164,7 @@ class MHHTTPClient(object):
         Los posibles estados son: unknown, capturing, capture_finished, capture_error, manifest, 
         manifest_error, manifest_finished, compressing, compressing_error, uploading, upload_finished, upload_error
         """
-        pass
-        #return self.__call('POST', SETRECORDINGSTATE_ENDPOINT, {'id': recording_id}, {'state': state})
+        return self.__call('POST', SETRECORDINGSTATE_ENDPOINT, {'id': recording_id}, {'state': state})
 
 
     def setconfiguration(self, capture_devices):
