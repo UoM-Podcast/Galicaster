@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom4.5) precise; urgency=low
+galicaster (1.3.2-uom4.6) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,7 +15,7 @@ galicaster (1.3.2-uom4.5) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
-  * Changed, Connection timeout increased to 10s
+  * Changed, Connection timeout increased to 20s
   * Reverted, set_state now active, sending status to mhorn enabled
   * Changed, config can now be located in home directory under .galicaster/
   * Enhancement, textoverlay option now in v4l2 and blackmagic bins
