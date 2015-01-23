@@ -85,7 +85,7 @@ class MHHTTPClient(object):
         c.setopt(pycurl.URL, theServer + endpoint.format(**params))
         # FOLLOWLOCATION, True used for ssl redirect
         c.setopt(pycurl.FOLLOWLOCATION, True)
-        c.setopt(pycurl.CONNECTTIMEOUT, 2)
+        c.setopt(pycurl.CONNECTTIMEOUT, 10)
         if timeout:
             c.setopt(pycurl.TIMEOUT, 10)
         c.setopt(pycurl.NOSIGNAL, 1)
