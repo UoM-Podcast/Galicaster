@@ -77,7 +77,7 @@ def has_succeeded(mp_id, mp):
     if mp_workflow_state:
         logger.debug('mp {} already marked as failed workflow - Ignoring'.format(mp_id))
     else:
-        if mp.getOpStatus('ingest') == mediapackage.OP_DONE:
+        if mp.getOpStatus('ingest') == mediapackage.OP_DONE or mp.getOpStatus('ingest') == mediapackage.OP_NIGHTLY:
             # check for the current mediapackage workflow state
             try:
                 workflow_state = mhclient.search_by_mp_id(mp_id)['workflow']['state']
