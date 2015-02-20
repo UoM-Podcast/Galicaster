@@ -122,11 +122,11 @@ def check_repository(self):
             #repository update
             mp_list.update(mp)
 
-        scheduler = context.get_scheduler()
-        try:
-                    scheduler.create_new_timer(mp)
-        except ValueError:
-                    #log or set default value
-                    pass
-        #logging
-        logger.info("Mediapackage with UID:%s have been reprogrammed", uid)
+            scheduler = context.get_scheduler()
+            try:
+                        scheduler.create_new_timer(mp)
+            except ValueError:
+                        #log or set default value
+                        pass
+            #logging
+            logger.info("Mediapackage with UID:%s have been reprogrammed", uid)
