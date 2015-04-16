@@ -22,7 +22,9 @@ YES = ['true', 'yes', 'ok', 'si', 'y']
 
 class Conf(object):  # TODO list get and other ops around profile
 
-    def __init__(self, conf_file='/etc/galicaster/conf.ini',
+    def __init__(self, conf_folder='/etc/galicaster/',
+                 conf_folder_user=os.getenv('HOME') + '/.galicaster/',
+                 conf_file='/etc/galicaster/conf.ini',
                  conf_file_user=os.getenv('HOME') + '/.galicaster/conf.ini',
                  conf_dist_file=None,
                  profile_folder='/etc/galicaster/profiles',
@@ -34,6 +36,9 @@ class Conf(object):  # TODO list get and other ops around profile
         self.__current_profile = None
 
         # FIXME when using 2.7 dict_type=collections.OrderedDict)
+        self.conf_folder = (conf_folder_user if os.path.isdir(conf_folder_user) else
+                            conf_folder if os.path.isdir(conf_folder) else
+                            os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
         self.conf_file = (conf_file_user if os.path.isfile(conf_file_user) else
                           conf_file if os.path.isfile(conf_file) else
                           os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'conf.ini')))
