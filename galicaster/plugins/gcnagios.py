@@ -69,7 +69,7 @@ class GCNagios(object):
 
         if error_message and error_message.startswith('GStreamer encountered a general resource error'):
             logger.debug('GStreamer error: ' + error_message)
-            self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message + ' Reboot Required'
+            self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message.replace('\n', '') + ' Reboot Required'
             self.exit_code = NAGIOS_CRITICAL
             self.make_plugin()
         else:
