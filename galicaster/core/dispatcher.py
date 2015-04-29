@@ -53,6 +53,8 @@ gobject.signal_new('start-preview', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject
 # NEW ON 1.3
 gobject.signal_new('collect-recordings', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
 gobject.signal_new('recording-closed', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
+# NEW
+gobject.signal_new('manual-record', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
 #RECORDER/GSTREAMER
 gobject.signal_new('gst-pipeline-created', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT) )
 gobject.signal_new('gst-sync-message', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT) )

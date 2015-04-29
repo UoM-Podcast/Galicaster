@@ -8,13 +8,14 @@ import subprocess
 from threading import Event, Thread
 import time
 import uuid
+import gtk
 
 import gobject
 from MeteorClient import MeteorClient
 import pyscreenshot as ImageGrab
 
 from galicaster.core import context
-
+from galicaster.classui import recorderui
 
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
@@ -59,10 +60,12 @@ class DDP(Thread):
         self.currentMediaPackage = None
         self.currentProfile = None
         self.has_disconnected = False
+        self._screen_width = gtk.gdk.screen_width()
+        self._screen_height = gtk.gdk.screen_height()
 
         cam_available = conf.get(
             'sussexlogin',
-            'cam_available') or cam_available
+            'cam_available') #or cam_available
         if cam_available in ('True', 'true', True, '1', 1):
             self.cam_available = 1
         elif cam_available in ('False', 'false', False, '0', 0):
@@ -110,7 +113,6 @@ class DDP(Thread):
                 logger.warn('DDP connection failed')
 
     def update(self, collection, query, update):
-        print 'ham'
         if self.client.connected and self.subscribedTo('GalicasterControl'):
             try:
                 self.client.update(
@@ -189,14 +191,14 @@ class DDP(Thread):
             if track.device not in audio_devices:
                 file = os.path.join('/tmp', track.file + '.jpg')
                 try:
-                    if(os.path.getctime(file) > time.time() - 3):
+                    if(os.path.getctime(file) > time.time() - 4000):
                         files[track.flavor] = (track.flavor + '.jpg',
                                                open(file, 'rb'),
                                                'image/jpeg')
                 except Exception:
                     logger.warn("Unable to check date of or open file (%s)"
                                 % file)
-        im = ImageGrab.grab(bbox=(10, 10, 1280, 720), backend='imagemagick')
+        im = ImageGrab.grab(bbox=(10, 10, self._screen_width, self._screen_height), backend='imagemagick')
         im.thumbnail((640, 360))
         output = cStringIO.StringIO()
         if im.mode != "RGB":
@@ -206,11 +208,9 @@ class DDP(Thread):
                                'image/jpeg')
         try:
             # add verify=False for testing self signed certs
-            requests.post(
-                "%s/image/%s" %
-                (self._http_host, self.id), files=files, auth=(
-                    self._user, self._password))
-        except Exception:
+            requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password))
+        except Exception as e:
+            #print e
             logger.warn('Unable to post images')
 
     def mixer_changed(self, source=None, condition=None, reopen=True):
@@ -383,13 +383,16 @@ class DDP(Thread):
         self.recording = me['recording']
         if self.recording:
             meta = me.get('currentMediaPackage', {}) or {}
-            profile = me.get('currentProfile', 'nocam')
-            series = (meta.get('series_title', ''), meta.get('isPartOf', ''))
-            user = {'user_name': meta.get('creator', ''),
-                    'user_id': meta.get('rightsHolder', '')}
+            print meta
+            # profile = me.get('currentProfile', 'nocam')
+            # series = (meta.get('series_title', ''), meta.get('isPartOf', ''))
+            # user = {'user_name': meta.get('creator', ''),
+            #         'user_id': meta.get('rightsHolder', '')}
             title = meta.get('title', 'Unknown')
-            dispatcher.emit('sussexlogin-record',
-                            (user, title, series, profile))
+            print title
+            # dispatcher.emit('sussexlogin-record',
+            #                 (user, title, series, profile))
+            dispatcher.emit("manual-record")
         else:
             dispatcher.emit("stop-record", '')
 
@@ -468,5 +471,4 @@ class DDP(Thread):
         return controls
 
     def subscribedTo(self, publication):
-        print self.client.subscriptions.get(publication) != None
         return self.client.subscriptions.get(publication) != None

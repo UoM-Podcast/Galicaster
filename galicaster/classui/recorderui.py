@@ -152,6 +152,7 @@ class RecorderClassUI(gtk.Box):
         self.dispatcher.connect("update-rec-vumeter", self.audiobar.SetVumeter)
         self.dispatcher.connect("galicaster-status", self.event_change_mode)
         self.dispatcher.connect("galicaster-notify-quit", self.close)
+        self.dispatcher.connect("manual-record", self.on_rec)
 
         nb=builder.get_object("data_panel")
         pages = nb.get_n_pages()        
@@ -290,6 +291,7 @@ class RecorderClassUI(gtk.Box):
 
     def on_rec(self,button=None): 
         """Manual Recording """
+        print 'ham'
         logger.info("Recording")
         self.dispatcher.emit("starting-record", self)
         self.recorder.record()
@@ -429,6 +431,7 @@ class RecorderClassUI(gtk.Box):
 
     def on_scheduled_start(self, source, identifier):
         """Starts a scheduled recording, replacing the mediapackage in use"""
+        print 'gregs'
         logger.info("Scheduled Start")
         self.conf.reload()
         self.current_mediapackage = identifier
