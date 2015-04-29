@@ -99,6 +99,7 @@ class DDP(Thread):
         dispatcher.connect('update-rec-vumeter', self.vumeter)
         dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
         dispatcher.connect('start-before', self.on_start_recording)
+        dispatcher.connect('starting-record' , self.on_start_manual_recording)
         dispatcher.connect('restart-preview', self.on_stop_recording)
         dispatcher.connect('update-rec-status', self.on_rec_status_update)
 
@@ -143,6 +144,22 @@ class DDP(Thread):
             self.update_images()
         else:
             self.connect()
+
+
+    def on_start_manual_recording(self, sender, recorderui=None):
+        self.recording = True
+        #self.currentMediaPackage = self.media_package_metadata(id)
+        self.currentProfile = context.get_state().profile.name
+        self.update(
+            'rooms', {
+                '_id': self.id
+            }, {
+                '$set': {
+                    'currentMediaPackage': None,
+                    'currentProfile': self.currentProfile,
+                    'recording': self.recording
+                }
+            })
 
     def on_start_recording(self, sender, id):
         self.recording = True
@@ -249,7 +266,7 @@ class DDP(Thread):
                         'paused': is_paused}})
             self.paused = is_paused
         if data == '  Recording  ':
-            subprocess.call(['killall', 'maliit-server'])
+            #subprocess.call(['killall', 'maliit-server'])
             self.update_images(.75)
 
     def media_package_metadata(self, id):
