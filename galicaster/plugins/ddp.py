@@ -340,7 +340,7 @@ class DDP(Thread):
             else:
                 #audio = self.read_audio_settings()
                 data['_id'] = self.id
-                data['audio'] = audio
+                #data['audio'] = audio
                 self.insert('rooms', data)
 
     def inputs(self):
