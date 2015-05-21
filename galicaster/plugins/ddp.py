@@ -1,5 +1,5 @@
 import calendar
-import alsaaudio
+#import alsaaudio
 import cStringIO
 import os
 import requests
