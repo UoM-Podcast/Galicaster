@@ -30,7 +30,7 @@ videostr = ( ' decklinksrc connection=sdi mode=12 name=gc-blackmagic-src ! '
              ' gc-blackmagic-tee. ! queue ! valve drop=false name=gc-blackmagic-valve ! ffmpegcolorspace ! '
              ' gc-blackmagic-enc ! queue ! gc-blackmagic-muxer ! '
              ' queue ! identity name=gc-blackmagic-idend ! filesink name=gc-blackmagic-sink async=false' 
-             ' gc-blackmagic-tee. ! queue ! videorate ! videoscale ! capsfilter name=gc-blackmagic-scaps !'
+             ' gc-blackmagic-tee. ! queue ! videorate ! videoscale !'
              ' jpegenc ! multifilesink name=gc-blackmagic-thumbsink ')
 audiostr= (
             #AUDIO
