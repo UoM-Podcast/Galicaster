@@ -33,7 +33,7 @@ class DDP(Thread):
         Thread.__init__(self)
         self.meteor = conf.get('ddp', 'meteor')
 
-        self.client = MeteorClient(self.meteor, debug=False)
+        self.client = MeteorClient(self.meteor,  debug=False)
         self.client.on('added', self.on_added)
         self.client.on('changed', self.on_changed)
         self.client.on('subscribed', self.on_subscribed)
@@ -45,7 +45,7 @@ class DDP(Thread):
         self.displayName = conf.get('sussexlogin', 'room_name')
         self.vu_min = -70
         self.vu_range = 40
-        self.do_vu = 0
+        self.vu_data = 0
         self.last_vu = None
         self.ip = socket.gethostbyname(socket.gethostname())
         self.id = conf.get('ingest', 'hostname')
@@ -96,8 +96,9 @@ class DDP(Thread):
         # self.watchid = gobject.io_add_watch(fd, eventmask, self.mixer_changed)
 
         dispatcher.connect('galicaster-init', self.on_init)
-        #dispatcher.connect('update-rec-vumeter', self.vumeter)
+        dispatcher.connect('update-rec-vumeter', self.vumeter)
         dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
+        dispatcher.connect('galicaster-notify-timer-short', self.update_vu)
         dispatcher.connect('start-before', self.on_start_recording)
         dispatcher.connect('starting-record' , self.on_start_manual_recording)
         dispatcher.connect('restart-preview', self.on_stop_recording)
@@ -238,21 +239,21 @@ class DDP(Thread):
     #     self.update_audio()
     #     return True
 
-    # def vumeter(self, element, data):
-    #     if self.do_vu == 0:
-    #         if data == "Inf":
-    #             data = 0
-    #         else:
-    #             if data < -self.vu_range:
-    #                 data = -self.vu_range
-    #             elif data > 0:
-    #                 data = 0
-    #         data = int(((data + self.vu_range) / float(self.vu_range)) * 100)
-    #         if data != self.last_vu:
-    #             update = {'vumeter': data}
-    #             self.update('rooms', {'_id': self.id}, {'$set': update})
-    #             self.last_vu = data
-    #     self.do_vu = (self.do_vu + 1) % 20
+    def vumeter(self, element, data):
+        if data == "Inf":
+            data = 0
+        else:
+            if data < -self.vu_range:
+                data = -self.vu_range
+            elif data > 0:
+                data = 0
+        self.vu_data = int(((data + self.vu_range) / float(self.vu_range)) * 100)
+
+    def update_vu(self, element):
+        if self.vu_data != self.last_vu:
+                update = {'vumeter': self.vu_data}
+                self.update('rooms', {'_id': self.id}, {'$set': update})
+                self.last_vu = self.vu_data
 
     def on_rec_status_update(self, element, data):
         is_paused = data == 'Paused'
