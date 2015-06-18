@@ -13,9 +13,11 @@ import gtk
 import gobject
 from MeteorClient import MeteorClient
 import pyscreenshot as ImageGrab
+from PIL import Image
 
 from galicaster.core import context
 from galicaster.classui import recorderui
+from galicaster.recorder import recorder
 
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
@@ -55,6 +57,8 @@ class DDP(Thread):
         self._audiostream_port = conf.get('audiostream', 'port') or 31337
         self.netreg_id = conf.get('ddp', 'netreg_id')
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
+        self.screenshot = conf.get_boolean('ddp', 'take_screenshot')
+        self.screenshot_file = conf.get('ddp', 'existing_screenshot')
         self.paused = False
         self.recording = False
         self.currentMediaPackage = None
@@ -95,7 +99,7 @@ class DDP(Thread):
         # fd, eventmask = self.audiofaders[0]['control'].polldescriptors()[0]
         # self.watchid = gobject.io_add_watch(fd, eventmask, self.mixer_changed)
 
-        #dispatcher.connect('galicaster-init', self.on_init)
+        dispatcher.connect('galicaster-init', self.on_init)
         dispatcher.connect('update-rec-vumeter', self.vumeter)
         dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
         dispatcher.connect('galicaster-notify-timer-short', self.update_vu)
@@ -194,8 +198,8 @@ class DDP(Thread):
             })
         self.update_images(1.5)
 
-    # def on_init(self, data):
-    #     self.update_images(1.5)
+    def on_init(self, data):
+        self.update_images(1.5)
 
     def update_images(self, delay=0):
         worker = Thread(target=self._update_images, args=(delay,))
@@ -204,19 +208,30 @@ class DDP(Thread):
     def _update_images(self, delay):
         time.sleep(delay)
         files = {}
+
         audio_devices = ['audiotest', 'autoaudio', 'pulse']
+        no_support_devices = ['blackmagic']
         for track in context.get_state().profile.tracks:
             if track.device not in audio_devices:
-                file = os.path.join('/tmp', track.file + '.jpg')
-                try:
-                    if(os.path.getctime(file) > time.time() - 4000):
-                        files[track.flavor] = (track.flavor + '.jpg',
-                                               open(file, 'rb'),
-                                               'image/jpeg')
-                except Exception:
-                    logger.warn("Unable to check date of or open file (%s)"
-                                % file)
-        im = ImageGrab.grab(bbox=(10, 10, self._screen_width, self._screen_height), backend='imagemagick')
+                if track in no_support_devices:
+                    logger.debug("{0} bin jpg multifilesink unsupported".format(track))
+                else:
+                    track_file = os.path.join('/tmp', track.file + '.jpg')
+                    try:
+                        if(os.path.getctime(track_file) > time.time() - 4000):
+                            files[track.flavor] = (track.flavor + '.jpg',
+                                                   open(track_file, 'rb'),
+                                                   'image/jpeg')
+                    except IOError:
+                        logger.warn("Unable to check date of or open file {0}".format(track_file))
+        if self.screenshot:
+            im = ImageGrab.grab(bbox=(10, 10, self._screen_width, self._screen_height), backend='imagemagick')
+        else:
+            try:
+                im = Image.open(self.screenshot_file)
+            except IOError as e:
+                logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
+                return
         im.thumbnail((640, 360))
         output = cStringIO.StringIO()
         if im.mode != "RGB":
