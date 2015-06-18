@@ -213,8 +213,8 @@ class DDP(Thread):
         no_support_devices = ['blackmagic']
         for track in context.get_state().profile.tracks:
             if track.device not in audio_devices:
-                if track in no_support_devices:
-                    logger.debug("{0} bin jpg multifilesink unsupported".format(track))
+                if track.device in no_support_devices:
+                    logger.debug("{0} bin jpg multifilesink unsupported".format(track.device))
                 else:
                     track_file = os.path.join('/tmp', track.file + '.jpg')
                     try:
@@ -225,9 +225,11 @@ class DDP(Thread):
                     except IOError:
                         logger.warn("Unable to check date of or open file {0}".format(track_file))
         if self.screenshot:
+            # take a screenshot with pyscreenshot
             im = ImageGrab.grab(bbox=(10, 10, self._screen_width, self._screen_height), backend='imagemagick')
         else:
             try:
+                # used if screenshot already exists
                 im = Image.open(self.screenshot_file)
             except IOError as e:
                 logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
@@ -241,7 +243,7 @@ class DDP(Thread):
                                'image/jpeg')
         try:
             # add verify=False for testing self signed certs
-            requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password))
+            requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password), verify=False)
         except Exception as e:
             #print e
             logger.warn('Unable to post images')
