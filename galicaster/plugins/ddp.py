@@ -95,7 +95,7 @@ class DDP(Thread):
         # fd, eventmask = self.audiofaders[0]['control'].polldescriptors()[0]
         # self.watchid = gobject.io_add_watch(fd, eventmask, self.mixer_changed)
 
-        dispatcher.connect('galicaster-init', self.on_init)
+        #dispatcher.connect('galicaster-init', self.on_init)
         dispatcher.connect('update-rec-vumeter', self.vumeter)
         dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
         dispatcher.connect('galicaster-notify-timer-short', self.update_vu)
@@ -194,8 +194,8 @@ class DDP(Thread):
             })
         self.update_images(1.5)
 
-    def on_init(self, data):
-        self.update_images(1.5)
+    # def on_init(self, data):
+    #     self.update_images(1.5)
 
     def update_images(self, delay=0):
         worker = Thread(target=self._update_images, args=(delay,))
