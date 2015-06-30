@@ -242,13 +242,13 @@ class DDP(Thread):
             except IOError as e:
                 logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
                 return
-        im.thumbnail((320, 240), Image.ANTIALIAS)
+        im.thumbnail((512, 384), Image.ANTIALIAS)
         output = cStringIO.StringIO()
         if im.mode != "RGB":
             im = im.convert("RGB")
-        im.save(output, format="PNG", optimize=True)
-        files['galicaster'] = ('galicaster.png', output.getvalue(),
-                               'image/png')
+        im.save(output, format="JPEG", optimize=True)
+        files['galicaster'] = ('galicaster.jpg', output.getvalue(),
+                               'image/jpeg')
         try:
             # add verify=False for testing self signed certs
             requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password), verify=False)
