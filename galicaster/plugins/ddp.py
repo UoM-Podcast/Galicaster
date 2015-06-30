@@ -9,6 +9,7 @@ from threading import Event, Thread
 import time
 import uuid
 import gtk
+from random import randint
 
 import gobject
 from MeteorClient import MeteorClient
@@ -66,6 +67,8 @@ class DDP(Thread):
         self.has_disconnected = False
         self._screen_width = gtk.gdk.screen_width()
         self._screen_height = gtk.gdk.screen_height()
+        self.last_checked = time.time()
+        self.check_after = randint(1, 100)
 
         cam_available = conf.get(
             'sussexlogin',
@@ -114,10 +117,14 @@ class DDP(Thread):
     def connect(self):
         # FIXME make this a config choice or remove
         #if not self.has_disconnected:
+        # only run if it is time
+        if (self.last_checked + self.check_after) >= time.time():
+            return
         try:
             self.client.connect()
         except Exception:
             logger.warn('DDP connection failed')
+        self.last_checked = time.time()
 
     def update(self, collection, query, update):
         if self.client.connected and self.subscribedTo('GalicasterControl'):
