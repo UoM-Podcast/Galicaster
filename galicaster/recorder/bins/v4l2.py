@@ -162,6 +162,8 @@ class GCv4l2(gst.Bin, base.Base):
             newcaps = 'video/x-raw-yuv,' + fr[0]
             self.set_value_in_pipeline(newcaps, 'gc-v4l2-vrate', 'caps', gst.Caps)
 
+        self.set_value_in_pipeline(self.options['screenshot_caps'], 'gc-v4l2-scaps', 'caps', gst.Caps)
+
         for pos in ['right','left','top','bottom']:
             self.set_option_in_pipeline('videocrop-'+pos, 'gc-v4l2-crop', pos, int)
 

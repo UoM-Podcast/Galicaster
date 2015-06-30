@@ -104,7 +104,7 @@ class DDP(Thread):
         dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
         dispatcher.connect('galicaster-notify-timer-short', self.update_vu)
         dispatcher.connect('start-before', self.on_start_recording)
-        dispatcher.connect('starting-record' , self.on_start_manual_recording)
+        dispatcher.connect('starting-record', self.on_start_manual_recording)
         dispatcher.connect('restart-preview', self.on_stop_recording)
         dispatcher.connect('update-rec-status', self.on_rec_status_update)
 
@@ -112,11 +112,12 @@ class DDP(Thread):
         self.connect()
 
     def connect(self):
-        if not self.has_disconnected:
-            try:
-                self.client.connect()
-            except Exception:
-                logger.warn('DDP connection failed')
+        # FIXME make this a config choice or remove
+        #if not self.has_disconnected:
+        try:
+            self.client.connect()
+        except Exception:
+            logger.warn('DDP connection failed')
 
     def update(self, collection, query, update):
         if self.client.connected and self.subscribedTo('GalicasterControl'):
@@ -245,7 +246,7 @@ class DDP(Thread):
             # add verify=False for testing self signed certs
             requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password), verify=False)
         except Exception as e:
-            #print e
+            print e
             logger.warn('Unable to post images')
 
     # def mixer_changed(self, source=None, condition=None, reopen=True):
