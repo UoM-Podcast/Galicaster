@@ -57,6 +57,7 @@ class DDP(Thread):
         self._http_host = conf.get('ddp', 'http_host')
         self._audiostream_port = conf.get('audiostream', 'port') or 31337
         self.netreg_id = conf.get('ddp', 'netreg_id')
+        self.support_group = conf.get('ddp', 'support_group')
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot = conf.get_boolean('ddp', 'take_screenshot')
         self.screenshot_file = conf.get('ddp', 'existing_screenshot')
@@ -209,8 +210,8 @@ class DDP(Thread):
         self.update_images(1.5)
 
     def on_init(self, data):
-        self.update_images(1.5)
-
+        self.update_images(randint(1, 10))
+        
     def update_images(self, delay=0):
         worker = Thread(target=self._update_images, args=(delay,))
         worker.start()
@@ -338,6 +339,7 @@ class DDP(Thread):
                 'heartbeat': int(time.time()),
                 'camAvailable': self.cam_available,
                 'netregId': self.netreg_id,
+                'supportGroup': self.support_group,
                 'inputs': self.inputs(),
                 'stream': {
                     'port': self._audiostream_port,
