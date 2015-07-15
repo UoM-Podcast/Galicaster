@@ -19,9 +19,6 @@ def init():
     try:
         audiostream = AudioStream()
         audiostream.start()
-        print _id
-        print _port
-        print _http_host
     except Exception as e:
         print e
 
@@ -32,7 +29,6 @@ class AudioStream(Thread):
         Thread.__init__(self)
 
         serveraddr = ('', _port)
-        print 'ham'
         server = ThreadedHTTPServer(serveraddr, AudioStreamer)
         server.allow_reuse_address = True
         server.timeout = 30

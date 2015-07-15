@@ -107,15 +107,15 @@ class DDP(Thread):
 
         dispatcher.connect('galicaster-init', self.on_init)
         dispatcher.connect('update-rec-vumeter', self.vumeter)
-        dispatcher.connect('galicaster-notify-timer-short', self.heartbeat)
+        dispatcher.connect('galicaster-notify-timer-long', self.heartbeat)
         dispatcher.connect('galicaster-notify-timer-short', self.update_vu)
         dispatcher.connect('start-before', self.on_start_recording)
         dispatcher.connect('starting-record', self.on_start_manual_recording)
         dispatcher.connect('restart-preview', self.on_stop_recording)
         dispatcher.connect('update-rec-status', self.on_rec_status_update)
 
-    def run(self):
-        self.connect()
+    # def run(self):
+    #     self.connect()
 
     def connect(self):
         # FIXME make this a config choice or remove
@@ -160,7 +160,6 @@ class DDP(Thread):
             self.update_images()
         else:
             self.connect()
-
 
     def on_start_manual_recording(self, sender, recorderui=None):
         self.recording = True
@@ -210,8 +209,8 @@ class DDP(Thread):
         self.update_images(1.5)
 
     def on_init(self, data):
-        self.update_images(randint(1, 10))
-        
+        self.update_images(randint(1, 20))
+
     def update_images(self, delay=0):
         worker = Thread(target=self._update_images, args=(delay,))
         worker.start()
