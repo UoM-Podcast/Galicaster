@@ -7,7 +7,6 @@ import socket
 import subprocess
 from threading import Event, Thread
 import time
-import uuid
 import gtk
 from random import randint
 
@@ -17,8 +16,6 @@ import pyscreenshot as ImageGrab
 from PIL import Image
 
 from galicaster.core import context
-from galicaster.classui import recorderui
-from galicaster.recorder import recorder
 
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
@@ -45,7 +42,7 @@ class DDP(Thread):
         self.client.on('closed', self.on_closed)
         self.client.on('logged_in', self.on_logged_in)
 
-        self.displayName = conf.get('sussexlogin', 'room_name')
+        self.displayName = conf.get('ddp', 'room_name')
         self.vu_min = -70
         self.vu_range = 40
         self.vu_data = 0
@@ -55,8 +52,6 @@ class DDP(Thread):
         self._user = conf.get('ddp', 'user')
         self._password = conf.get('ddp', 'password')
         self._http_host = conf.get('ddp', 'http_host')
-        self._audiostream_port = conf.get('audiostream', 'port') or 31337
-        self.netreg_id = conf.get('ddp', 'netreg_id')
         self.support_group = conf.get('ddp', 'support_group')
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot = conf.get_boolean('ddp', 'take_screenshot')
@@ -72,7 +67,7 @@ class DDP(Thread):
         self.check_after = randint(1, 100)
 
         cam_available = conf.get(
-            'sussexlogin',
+            'ddp',
             'cam_available') #or cam_available
         if cam_available in ('True', 'true', True, '1', 1):
             self.cam_available = 1
@@ -327,7 +322,6 @@ class DDP(Thread):
     def on_subscribed(self, subscription):
         if(subscription == 'GalicasterControl'):
             me = self.client.find_one('rooms')
-            stream_key = uuid.uuid4().get_hex()
 
             # Data to push when inserting or updating
             data = {
@@ -337,13 +331,8 @@ class DDP(Thread):
                 'recording': self.recording,
                 'heartbeat': int(time.time()),
                 'camAvailable': self.cam_available,
-                'netregId': self.netreg_id,
                 'supportGroup': self.support_group,
                 'inputs': self.inputs(),
-                'stream': {
-                    'port': self._audiostream_port,
-                    'key': stream_key
-                }
             }
             if self.currentMediaPackage:
                 data['currentMediaPackage'] = self.currentMediaPackage
