@@ -29,8 +29,10 @@ videostr = ( ' decklinksrc connection=sdi mode=12 name=gc-blackmagic-src ! '
              #REC VIDEO
              ' gc-blackmagic-tee. ! queue ! valve drop=false name=gc-blackmagic-valve ! ffmpegcolorspace ! '
              ' gc-blackmagic-enc ! queue ! gc-blackmagic-muxer ! '
-             ' queue ! identity name=gc-blackmagic-idend ! filesink name=gc-blackmagic-sink async=false' 
+             ' queue ! identity name=gc-blackmagic-idend ! filesink name=gc-blackmagic-sink async=false'
              )
+             # ' gc-blackmagic-tee. ! queue ! videorate ! videoscale !'
+             # ' jpegenc ! multifilesink name=gc-blackmagic-thumbsink ')
 audiostr= (
             #AUDIO
             ' gc-blackmagic-src.audiosrc ! identity name=gc-blackmagic-idaudio ! queue ! '
@@ -283,6 +285,9 @@ class GCblackmagic(gst.Bin, base.Base):
                     text.set_property(opts, int(vals))
                 else:
                     text.set_property(opts, vals)
+
+        # self.set_value_in_pipeline(path.join('/tmp', self.options['file'] + '.jpg'), 'gc-blackmagic-thumbsink', 'location')
+
 
   def changeValve(self, value):
     valve1=self.get_by_name('gc-blackmagic-valve')

@@ -152,6 +152,7 @@ class RecorderClassUI(gtk.Box):
         self.dispatcher.connect("update-rec-vumeter", self.audiobar.SetVumeter)
         self.dispatcher.connect("galicaster-status", self.event_change_mode)
         self.dispatcher.connect("galicaster-notify-quit", self.close)
+        self.dispatcher.connect("manual-record", self.on_rec)
 
         nb=builder.get_object("data_panel")
         pages = nb.get_n_pages()        
