@@ -109,6 +109,13 @@ class DDP(Thread):
         dispatcher.connect('restart-preview', self.on_stop_recording)
         dispatcher.connect('update-rec-status', self.on_rec_status_update)
 
+        self.token_file = conf.conf_folder + 'peakaboo_token'
+        try:
+            if not os.path.exists(self.token_file):
+                self.make_token_file = open(self.token_file, 'a').close
+        except IOError:
+            logger.debug('no token file')
+            pass
     # def run(self):
     #     self.connect()
 
@@ -432,12 +439,19 @@ class DDP(Thread):
 
     def on_connected(self):
         logger.info('Connected to Meteor')
-        token = conf.get('ddp', 'token')
+        # token = conf.get('ddp', 'token')
+        with open(self.token_file, "r") as get_token:
+            token = get_token.read()
+        print token
+        get_token.close()
         self.client.login(self._user, self._password)
 
     def on_logged_in(self, data):
-        conf.set('ddp', 'token', data['token'])
-        conf.update()
+        #conf.set('ddp', 'token', data['token'])
+        #conf.update()
+        with open(self.token_file, "w") as set_token:
+            set_token.write(data['token'])
+        set_token.close()
         try:
             self.client.subscribe(
                 'GalicasterControl',
