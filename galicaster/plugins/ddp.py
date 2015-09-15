@@ -442,13 +442,12 @@ class DDP(Thread):
         # token = conf.get('ddp', 'token')
         with open(self.token_file, "r") as get_token:
             token = get_token.read()
-        print token
         get_token.close()
-        self.client.login(self._user, self._password)
+        self.client.login(self._user, self._password, token=token)
 
     def on_logged_in(self, data):
-        #conf.set('ddp', 'token', data['token'])
-        #conf.update()
+        # conf.set('ddp', 'token', data['token'])
+        # conf.update()
         with open(self.token_file, "w") as set_token:
             set_token.write(data['token'])
         set_token.close()
