@@ -426,9 +426,9 @@ class DDP(Thread):
             title = meta.get('title', 'Unknown')
             # dispatcher.emit('sussexlogin-record',
             #                 (user, title, series, profile))
-            dispatcher.emit("manual-record")
-        else:
-            dispatcher.emit("stop-record", '')
+        #     dispatcher.emit("manual-record")
+        # else:
+        #     dispatcher.emit("stop-record", '')
 
     def on_connected(self):
         logger.info('Connected to Meteor')
