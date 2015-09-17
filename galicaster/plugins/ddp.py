@@ -83,7 +83,8 @@ class DDP(Thread):
                 audiofader = {}
                 fader = 'audiofader-' + fader
                 audiofader['cardindex'] = conf.get_int(fader, 'cardindex')
-                audiofader['channel'] = conf.get(fader, 'channel')
+                if conf.get(fader, 'channel') is not None:
+                    audiofader['channel'] = conf.get(fader, 'channel')
                 audiofader['name'] = conf.get(fader, 'name')
                 audiofader['display'] = conf.get(fader, 'display')
                 audiofader['min'] = conf.get_int(fader, 'min')
@@ -96,10 +97,14 @@ class DDP(Thread):
                 audiofader['control'] = alsaaudio.Mixer(control=audiofader['name'], cardindex=audiofader['cardindex'])
                 self.audiofaders.append(audiofader)
         except Exception as e:
-            print e
-        fd, eventmask = self.audiofaders[0]['control'].polldescriptors()[0]
-        self.watchid = gobject.io_add_watch(fd, eventmask, self.mixer_changed)
-
+            logger.debug(e)
+            self.audiofaders = None
+        try:
+            fd, eventmask = self.audiofaders[0]['control'].polldescriptors()[0]
+            self.watchid = gobject.io_add_watch(fd, eventmask, self.mixer_changed)
+        except Exception as e:
+            #print e
+            pass
         dispatcher.connect('galicaster-init', self.on_init)
         dispatcher.connect('update-rec-vumeter', self.vumeter)
         dispatcher.connect('galicaster-notify-timer-long', self.heartbeat)
@@ -257,16 +262,20 @@ class DDP(Thread):
             # add verify=False for testing self signed certs
             requests.post("{0}/image/{1}".format(self._http_host, self.id), files=files, auth=(self._user, self._password), verify=False)
         except Exception as e:
-            print e
+            #print e
             logger.warn('Unable to post images')
 
     def mixer_changed(self, source=None, condition=None, reopen=True):
-        if reopen:
-            for audiofader in self.audiofaders:
-                audiofader['control'] = alsaaudio.Mixer(
-                    control=audiofader['name'], cardindex=audiofader['cardindex'])
-        self.update_audio()
-        return True
+        if self.audiofaders:
+            if reopen:
+                for audiofader in self.audiofaders:
+                    audiofader['control'] = alsaaudio.Mixer(
+                        control=audiofader['name'], cardindex=audiofader['cardindex'])
+            try:
+                self.update_audio()
+            except Exception as e:
+                pass
+            return True
 
     def vumeter(self, element, data):
         if data == "Inf":
@@ -365,7 +374,8 @@ class DDP(Thread):
             else:
                 audio = self.read_audio_settings()
                 data['_id'] = self.id
-                data['audio'] = audio
+                if audio:
+                    data['audio'] = audio
                 self.insert('rooms', data)
 
     def inputs(self):
@@ -384,31 +394,41 @@ class DDP(Thread):
         return inputs
 
     def set_audio(self, fields):
-        faders = fields.get('audio')
-        if faders:
-            for fader in faders:
-                mixer = None
-                level = fader.get('level')
-                for audiofader in self.audiofaders:
-                    if audiofader['name'] == fader['name']:
-                        mixer = audiofader['control']
-                        break
-                if mixer:
-                    l, r = mixer.getvolume(fader['type'])
-                    if level >= 0 and l != level:
-                        mixer.setvolume(level, 0, fader['type'])
-                        mixer.setvolume(level, 1, fader['type'])
-            if self.store_audio:
-                # Relies on no password sudo access for current user to alsactl
-                subprocess.call(['sudo', 'alsactl', 'store'])
+        if self.audiofaders:
+            faders = fields.get('audio')
+            if faders:
+                for fader in faders:
+                    mixer = None
+                    level = fader.get('level')
+                    for audiofader in self.audiofaders:
+                        if audiofader['name'] == fader['name']:
+                            mixer = audiofader['control']
+                            break
+                    if mixer:
+                        l, r = mixer.getvolume(fader['type'])
+                        if level >= 0 and l != level:
+                            mixer.setvolume(level, 0, fader['type'])
+                            mixer.setvolume(level, 1, fader['type'])
+                if self.store_audio:
+                    # Relies on no password sudo access for current user to alsactl
+                    subprocess.call(['sudo', 'alsactl', 'store'])
 
     def on_added(self, collection, id, fields):
-        self.set_audio(fields)
-        self.update_audio()
+        try:
+            self.set_audio(fields)
+            self.update_audio()
+        except Exception as e:
+            #print e
+            logger.debug('audiofader issue: cannot adjust audio')
+            pass
 
     def on_changed(self, collection, id, fields, cleared):
         time.sleep(4)
-        self.set_audio(fields)
+        try:
+            self.set_audio(fields)
+        except Exception as e:
+            #print e
+            pass
         me = self.client.find_one('rooms')
         if self.paused != me['paused']:
             self.set_paused(me['paused'])
@@ -465,46 +485,53 @@ class DDP(Thread):
         logger.error('Disconnected from Meteor: err %d - %s' % (code, reason))
 
     def update_audio(self):
-        me = self.client.find_one('rooms')
-        audio = self.read_audio_settings()
-        update = False
-        if me:
-            mAudio = me.get('audio')
-            mAudioNames = [x['name'] for x in mAudio]
-            audioNames = [x['name'] for x in audio]
-            if set(mAudioNames) != set(audioNames):
-                update = True
-            if not update:
-                for key, fader in enumerate(audio):
-                    if mAudio[key].get('level') != fader.get('level'):
+        if self.audiofaders:
+            me = self.client.find_one('rooms')
+            audio = self.read_audio_settings()
+            update = False
+            if me:
+                mAudio = me.get('audio')
+                mAudioNames = [x['name'] for x in mAudio]
+                if audio:
+                    audioNames = [x['name'] for x in audio]
+                    if set(mAudioNames) != set(audioNames):
                         update = True
-            if update:
-                self.update(
-                    'rooms', {
-                        '_id': self.id}, {
-                        '$set': {
-                            'audio': audio}})
+                    if not update:
+                        for key, fader in enumerate(audio):
+                            if mAudio[key].get('level') != fader.get('level'):
+                                update = True
+                    if update:
+                        self.update(
+                            'rooms', {
+                                '_id': self.id}, {
+                                '$set': {
+                                    'audio': audio}})
 
     def read_audio_settings(self):
-        audio_settings = []
-        for audiofader in self.audiofaders:
-            if audiofader['display']:
-                audio_settings.append(
-                    self.control_values(audiofader)
-                )
-            # ensure fixed values
-            mixer = audiofader['control']
-            if audiofader['setrec']:
-                mixer.setrec(1)
-            if audiofader['mute']:
-                mixer.setmute(1)
-            if audiofader['unmute']:
-                mixer.setmute(0)
-            if audiofader['setlevel'] >= 0:
-                mixer.setvolume(audiofader['setlevel'], 0, audiofader['type'])
-                if 'Joined Playback Volume' not in mixer.volumecap():
-                    mixer.setvolume(audiofader['setlevel'], 1, audiofader['type'])
-        return audio_settings
+        if self.audiofaders:
+            audio_settings = []
+            for audiofader in self.audiofaders:
+                if audiofader['display']:
+                    try:
+                        audio_settings.append(
+                            self.control_values(audiofader)
+                        )
+                    except Exception as e:
+                        #print e
+                        return
+                # ensure fixed values
+                mixer = audiofader['control']
+                if audiofader['setrec']:
+                    mixer.setrec(1)
+                if audiofader['mute']:
+                    mixer.setmute(1)
+                if audiofader['unmute']:
+                    mixer.setmute(0)
+                if audiofader['setlevel'] >= 0:
+                    mixer.setvolume(audiofader['setlevel'], 0, audiofader['type'])
+                    if 'Joined Playback Volume' not in mixer.volumecap():
+                        mixer.setvolume(audiofader['setlevel'], 1, audiofader['type'])
+            return audio_settings
 
     def control_values(self, audiofader):
         controls = {}
