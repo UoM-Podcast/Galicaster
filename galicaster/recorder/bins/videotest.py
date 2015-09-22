@@ -22,9 +22,9 @@ from galicaster.recorder import module_register
 
 
 pipestr = (' videotestsrc name=gc-videotest-src pattern=0 is-live=true ! capsfilter name=gc-videotest-filter ! '
-           ' queue ! tee name=tee-vt  ! '
+           ' queue ! tee name=gc-videotest-tee  ! '
            ' queue !  ffmpegcolorspace ! queue ! xvimagesink sync=false async=false qos=false name=gc-videotest-preview'
-           ' tee-vt. ! queue ! valve drop=false name=gc-videotest-valve ! ffmpegcolorspace ! queue ! '
+           ' gc-videotest-tee. ! queue ! valve drop=false name=gc-videotest-valve ! ffmpegcolorspace ! queue ! '
            ' gc-videotest-enc ! queue ! gc-videotest-mux ! '
            ' queue ! filesink name=gc-videotest-sink async=false')
 
