@@ -211,9 +211,9 @@ class QRCodeScanner():
                 device = bin.options['device']
 
                 # Create the following subpipe:
-                # queue name=zbar-queue ! valve name=zbar-valve drop=False 
+                # queue name=zbar-queue ! valve name=zbar-valve drop=False
                 # ! ffmpegcolorspace ! videoscale ! capsfilter name=zbar-filter
-                # ! zbar name=zbar message=true ! fakesink'
+                # ! zbar name=zbar message=True ! fakesink'
 
                 zbar_queue = gst.element_factory_make("queue", "zbar-{}-queue".format(device))
                 zbar_valve = gst.element_factory_make("valve", "zbar-{}-valve".format(device))
@@ -230,18 +230,19 @@ class QRCodeScanner():
                     zbar_filter.set_property("caps", zbar_caps)
                 else :
                     zbar_caps = gst.Caps("video/x-raw-yuv")
-                zbar_filter.set_property("caps", zbar_caps)
-                
-                tee_name = 'gc-' + device + '-tee'
-                tee = pipeline.get_by_name(tee_name)
 
-                pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs, 
+                zbar_filter.set_property("caps", zbar_caps)
+
+                tee_name = 'gc-' + device + '-tee'
+                tee = bin.get_by_name(tee_name)
+
+                bin.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
                       zbar_videoscale, zbar_filter,
-                      zbar_zbar,zbar_fakesink)
-                gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs, 
+                      zbar_zbar, zbar_fakesink)
+                gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs,
                       zbar_videoscale, zbar_filter,
-                      zbar_zbar,zbar_fakesink)
-                      
+                      zbar_zbar, zbar_fakesink)
+
         self.pipeline = pipeline
         self.bins = bins
 
