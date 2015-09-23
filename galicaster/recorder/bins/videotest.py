@@ -23,7 +23,8 @@ from galicaster.recorder import module_register
 
 pipestr = (' videotestsrc name=gc-videotest-src pattern=0 is-live=true ! capsfilter name=gc-videotest-filter ! '
            ' queue ! tee name=gc-videotest-tee  ! '
-           ' queue !  ffmpegcolorspace ! queue ! xvimagesink sync=false async=false qos=false name=gc-videotest-preview'
+           ' queue ! videorate ! ffmpegcolorspace ! capsfilter name=gc-videotest-vrate !'
+           ' queue ! xvimagesink sync=false async=false qos=false name=gc-videotest-preview'
            ' gc-videotest-tee. ! queue ! valve drop=false name=gc-videotest-valve ! ffmpegcolorspace ! queue ! '
            ' gc-videotest-enc ! queue ! gc-videotest-mux ! '
            ' queue ! filesink name=gc-videotest-sink async=false')
@@ -120,11 +121,11 @@ class GCvideotest(gst.Bin, base.Base):
 
         self.get_by_name('gc-videotest-sink').set_property('location', path.join(self.options['path'], self.options['file']))
 
-        #self.get_by_name('gc-videotest-filter').set_property('caps', gst.Caps(self.options['caps']))
-        #fr = re.findall("framerate *= *[0-9]+/[0-9]+", self.options['caps'])
-        #if fr:
-        #    newcaps = 'video/x-raw-yuv,' + fr[0]
-            #self.get_by_name('gc-videotest-vrate').set_property('caps', gst.Caps(newcaps))
+        self.get_by_name('gc-videotest-filter').set_property('caps', gst.Caps(self.options['caps']))
+        fr = re.findall("framerate *= *[0-9]+/[0-9]+", self.options['caps'])
+        if fr:
+            newcaps = 'video/x-raw-yuv,' + fr[0]
+            self.get_by_name('gc-videotest-vrate').set_property('caps', gst.Caps(newcaps))
             
         source = self.get_by_name('gc-videotest-src')
         source.set_property('pattern', int(self.options['pattern']))
