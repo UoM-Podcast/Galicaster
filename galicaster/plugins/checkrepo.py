@@ -27,7 +27,7 @@ conf = context.get_conf()
 def init():	
     try:
         dispatcher = context.get_dispatcher()
-        dispatcher.connect('galicaster-notify-timer-long', check_repository)
+        dispatcher.connect('after-process-ical', check_repository)
         dispatcher.connect('collect-recordings', merge_recordings)
         dispatcher.connect('recorder-error', restart_galicaster)
 
