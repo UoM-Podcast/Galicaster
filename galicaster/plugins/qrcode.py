@@ -42,8 +42,10 @@ def init():
         symbols['stop'] = conf.get('qrcode', 'stop_code') or 'stop'
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
         rescale = conf.get('qrcode', 'rescale') or 'source'
-        hold_timeout = conf.get('qrcode', 'hold_timeout') or 1  # secs
-        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, context.get_logger())
+        drop_frames = conf.get_boolean('qrcode', 'drop_frames') or False
+        buffers = int(conf.get('qrcode', 'buffers')) or 200
+        hold_timeout = int(conf.get('qrcode', 'hold_timeout')) or 1  # secs
+        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, context.get_logger())
 
         dispatcher = context.get_dispatcher()
         dispatcher.connect('gst-pipeline-created', qr.qrcode_add_pipeline)
@@ -61,12 +63,14 @@ def init():
 
 class QRCodeScanner():
   
-    def __init__(self, mode, symbols, hold_timeout, rescale, logger=None):
+    def __init__(self, mode, symbols, hold_timeout, rescale, drop_frames, buffers, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
         self.mode = mode
         self.rescale = rescale
+        self.drop_frames = drop_frames
+        self.queue_buffers = buffers
         self.hold_timeout = hold_timeout  # secs
         self.hold_timeout_ns = hold_timeout*SEC2NANO  # nano secs
         self.hold_timestamp = 0
@@ -108,7 +112,7 @@ class QRCodeScanner():
         self.recorderui = recorderui
         dispatcher = context.get_dispatcher()
         self.sync_msg_handler = dispatcher.connect('gst-sync-message', self.qrcode_on_sync_message)
-    
+
     def qrcode_disconnect_to_sync_message(self, sender, mpurl):
         #print "Disconnecting from sync messages"
         dispatcher = context.get_dispatcher()
@@ -223,6 +227,10 @@ class QRCodeScanner():
                 zbar_zbar = gst.element_factory_make("zbar", "zbar-{}-zbar".format(device))
                 zbar_fakesink = gst.element_factory_make("fakesink")
 
+                if self.drop_frames:
+                    zbar_queue.set_property('leaky', 2)
+                zbar_queue.set_property('max-size-buffers', self.queue_buffers)
+
                 expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size
                 if self.rescale != 'source' and re.match(expr,self.rescale):
                     wh = [int(a) for a in self.rescale.split(re.search('[,x:]', self.rescale).group())]
@@ -289,4 +297,3 @@ class QRCodeScanner():
                 open(self.pause_state_file, 'a').close()
         else:
             remove(self.pause_state_file)
-
