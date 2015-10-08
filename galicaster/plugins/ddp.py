@@ -16,6 +16,7 @@ import pyscreenshot as ImageGrab
 from PIL import Image
 
 from galicaster.core import context
+from galicaster.classui import get_image_path
 
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
@@ -56,6 +57,7 @@ class DDP(Thread):
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot = conf.get_boolean('ddp', 'take_screenshot')
         self.screenshot_file = conf.get('ddp', 'existing_screenshot')
+        self.no_screenshot_file = 'no_screenshot.png'
         self.paused = False
         self.recording = False
         self.currentMediaPackage = None
@@ -250,7 +252,7 @@ class DDP(Thread):
                 im = Image.open(self.screenshot_file)
             except IOError as e:
                 logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
-                return
+                im = Image.open(get_image_path(self.no_screenshot_file))
         im.thumbnail((512, 384), Image.ANTIALIAS)
         output = cStringIO.StringIO()
         if im.mode != "RGB":
