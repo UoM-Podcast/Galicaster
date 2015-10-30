@@ -56,8 +56,7 @@ def init():
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
         qr.set_add_smil(conf.get_boolean('qrcode', 'mp_add_smil') or False)
         dispatcher.connect('recording-closed', qr.qrcode_update_mediapackage)
-        print hold_timeout
-        print buffers
+
     except ValueError:
         pass
 
