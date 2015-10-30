@@ -43,8 +43,8 @@ def init():
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
         rescale = conf.get('qrcode', 'rescale') or 'source'
         drop_frames = conf.get_boolean('qrcode', 'drop_frames') or False
-        buffers = int(conf.get('qrcode', 'buffers')) or 200
-        hold_timeout = int(conf.get('qrcode', 'hold_timeout')) or 1  # secs
+        buffers = conf.get_int('qrcode', 'buffers') or 200
+        hold_timeout = conf.get_int('qrcode', 'hold_timeout') or 1  # secs
         qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, context.get_logger())
 
         dispatcher = context.get_dispatcher()
@@ -56,7 +56,8 @@ def init():
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
         qr.set_add_smil(conf.get_boolean('qrcode', 'mp_add_smil') or False)
         dispatcher.connect('recording-closed', qr.qrcode_update_mediapackage)
-        
+        print hold_timeout
+        print buffers
     except ValueError:
         pass
 
