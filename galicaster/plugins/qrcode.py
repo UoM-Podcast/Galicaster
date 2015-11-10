@@ -229,7 +229,7 @@ class QRCodeScanner():
 
                 if self.drop_frames:
                     zbar_queue.set_property('leaky', 2)
-                #zbar_queue.set_property('max-size-buffers', self.queue_buffers)
+                zbar_queue.set_property('max-size-buffers', self.queue_buffers)
 
                 expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size
                 if self.rescale != 'source' and re.match(expr,self.rescale):
