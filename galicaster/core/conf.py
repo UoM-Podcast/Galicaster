@@ -301,11 +301,12 @@ class Conf(object):  # TODO list get and other ops around profile
         processing = self.get('color', 'processing')
         done = self.get('color', 'done')
         failed = self.get('color', 'failed')
+        delayed = self.get('color', 'delayed')
 
         if not old_style:
-            return [undefined, undefined, undefined, undefined, undefined, undefined]
+            return [undefined, undefined, undefined, undefined, undefined, undefined, undefined]
         else:
-            return [undefined, nightly, pending, processing, done, failed]
+            return [undefined, nightly, pending, processing, done, failed, delayed]
 
 
 class Profile(object):

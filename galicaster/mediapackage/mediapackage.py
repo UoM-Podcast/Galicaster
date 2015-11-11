@@ -47,6 +47,7 @@ OP_PENDING = 2
 OP_PROCESSING = 3
 OP_DONE = 4
 OP_FAILED = 5
+OP_DELAYED = 6
 
 
 # Text equivalents
@@ -70,7 +71,7 @@ op_status = {
     3: 'Processing',
     4: 'Done',
     5: 'Failed',
-
+    6: 'Delayed'
 }
 
 # Module Constants

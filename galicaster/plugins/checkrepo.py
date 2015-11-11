@@ -24,12 +24,15 @@ logger = context.get_logger()
 worker = context.get_worker()
 conf = context.get_conf()
 
+delay = conf.get_boolean('checkrepo', 'delay_merge')
+
 def init():	
     try:
         dispatcher = context.get_dispatcher()
         dispatcher.connect('after-process-ical', check_repository)
         dispatcher.connect('collect-recordings', merge_recordings)
         dispatcher.connect('recorder-error', restart_galicaster)
+        dispatcher.connect('galicaster-notify-nightly', merge_delayed)
 
     except ValueError:
         pass
@@ -40,7 +43,7 @@ def restart_galicaster(self, error_message):
         logger.info("killing Galicaster")
         os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
 
-def merge_recordings(self, mpUri):
+def merge_recordings(self, mpUri, mp):
     dest = os.path.join(mpUri, "CHECK_REPO")
     repofile = os.path.join(mpUri, "FILE_LIST")
     if os.path.isfile(dest):
@@ -70,7 +73,17 @@ def merge_recordings(self, mpUri):
                     logger.info("removing file: %s - size: %s", filepath, str(filesize))
                     os.remove(filepath)
         repocheck.close()
-        
+        if delay:
+            # stop ingest for now, set to delayed
+            logger.info('delaying merge of mp parts and ingest')
+            mp.setOpStatus('ingest', mediapackage.OP_DELAYED)
+            mp_list.update(mp)
+        else:
+            merge(mpUri, repofile, dest, mp_list)
+
+
+
+def merge(mpUri, repofile, dest, mp_list):
         os.system("/usr/share/galicaster/contrib/scripts/concat_mp " + mpUri + " " + repofile)
         duration = -1
         durpath = os.path.join(mpUri, "DURATION.txt")
@@ -96,10 +109,25 @@ def merge_recordings(self, mpUri):
                 mp.forceDuration(duration)
                 mp_list.update(mp)
                 logger.info("merging complete for UID:%s - URI: %s", uid, mpUri)
-        
-        
+
+
+def merge_delayed(self):
+    # merge and ingest the delayed mp's
+    if delay:
+        repo = context.get_repository()
+        for mp_id, mp in repo.iteritems():
+            if not (mp.status == mediapackage.SCHEDULED or mp.status == mediapackage.RECORDING):
+                mpUri = mp.getURI()
+                dest = os.path.join(mpUri, "CHECK_REPO")
+                repofile = os.path.join(mpUri, "FILE_LIST")
+                if os.path.exists(repofile):
+                    merge(mpUri, repofile, dest, repo)
+                    logger.info('Starting Ingest of merge delayed mediapackage: %s', mp_id)
+                    worker.ingest(mp)
+
+
 def check_repository(self):
-    #mp_list is collection of mediapackages ID's
+    # mp_list is collection of mediapackages ID's
     if context.get_state().is_recording:
         return
     mp_list = context.get_repository()
@@ -113,20 +141,20 @@ def check_repository(self):
                 repocheck = open(dest, "w")
                 repocheck.write(str(start) + "," + str(end) + ",\n")
                 repocheck.close()
-            #duration update            
+            # duration update
             x = datetime.datetime.utcnow() - start
             x = x.seconds-2            
             mp.setDuration(mp.getDuration() - x*1000)
-            #start-datetime update
+            # start-datetime update
             mp.setDate(datetime.datetime.utcnow()+datetime.timedelta(seconds=2))
-            #repository update
+            # repository update
             mp_list.update(mp)
 
             scheduler = context.get_scheduler()
             try:
                         scheduler.create_new_timer(mp)
             except ValueError:
-                        #log or set default value
+                        # log or set default value
                         pass
-            #logging
+            # logging
             logger.info("Mediapackage with UID:%s have been reprogrammed", uid)

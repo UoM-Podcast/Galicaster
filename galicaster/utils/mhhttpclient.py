@@ -239,7 +239,10 @@ class MHHTTPClient(object):
     def _get_workflow_server(self):
         if not self.workflow_server:
             service = self._get_endpoints(WORKFLOW_SERVICE_TYPE)
-            self.workflow_server = str(service['host'])
+            if not isinstance(service, dict):
+                self.workflow_server = str(service[0]['host'])
+            else:
+                self.workflow_server = str(service['host'])
         return self.workflow_server
 
     def search_by_mp_id(self, mp_id):

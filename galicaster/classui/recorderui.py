@@ -408,7 +408,7 @@ class RecorderClassUI(gtk.Box):
         self.repo.add_after_rec(self.mediapackage, self.recorder.bins_desc, 
                                 close_duration, self.mediapackage.manual)
         mp_mod_Uri = self.mediapackage.getURI()
-        self.dispatcher.emit("collect-recordings", mp_mod_Uri)
+        self.dispatcher.emit("collect-recordings", mp_mod_Uri, self.mediapackage)
         self.dispatcher.emit("recording-closed", mp_mod_Uri)
         duration = self.mediapackage.getDuration()
         if not duration :
@@ -418,7 +418,7 @@ class RecorderClassUI(gtk.Box):
                     duration = self.mediapackage.getDuration()
                     logger.info("updated mediapackage: %s to duration %s", uid , str(duration))
                     break
-        if self.status != GC_RECORDING : 
+        if not (self.status == GC_RECORDING or self.mediapackage.getOpStatus('ingest') == mediapackage.OP_DELAYED):
             code = 'manual' if self.mediapackage.manual else 'scheduled'
             if self.conf.get_lower('ingest', code) == 'immediately':
                 self.worker.ingest(self.mediapackage)
