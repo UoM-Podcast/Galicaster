@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom5.7) precise; urgency=low
+galicaster (1.3.2-uom5.8) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
