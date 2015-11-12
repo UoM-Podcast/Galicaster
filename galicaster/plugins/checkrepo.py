@@ -84,7 +84,7 @@ def merge_recordings(self, mpUri, mp):
 
 
 def merge(mpUri, repofile, dest, mp_list):
-        os.system("/usr/share/galicaster/contrib/scripts/concat_mp " + mpUri + " " + repofile)
+        os.system(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "contrib/scripts/concat_mp ")) + mpUri + " " + repofile)
         duration = -1
         durpath = os.path.join(mpUri, "DURATION.txt")
         if os.path.isfile(durpath):

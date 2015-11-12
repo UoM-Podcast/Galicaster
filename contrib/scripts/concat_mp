@@ -4,7 +4,7 @@
 segloc=$2
 lastsegloc=$1
 
-tmpdir=`mktemp -d /home/galicaster/gc_merge-XXXXXXXXXXXX`
+tmpdir=`mktemp -d $HOME/gc_merge-XXXXXXXXXXXX`
 cp $segloc $tmpdir
 echo $lastsegloc >>$tmpdir/CHECK_REPO
 
