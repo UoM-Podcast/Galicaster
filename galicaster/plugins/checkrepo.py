@@ -24,7 +24,7 @@ logger = context.get_logger()
 worker = context.get_worker()
 conf = context.get_conf()
 
-delay = conf.get_boolean('checkrepo', 'delay_merge')
+delay = conf.get_boolean('checkrepo', 'delay_merge') or False
 
 def init():	
     try:
