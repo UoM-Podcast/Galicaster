@@ -26,16 +26,19 @@ conf = context.get_conf()
 
 delay = conf.get_boolean('checkrepo', 'delay_merge') or False
 
+
 def init():	
     try:
         dispatcher = context.get_dispatcher()
         dispatcher.connect('after-process-ical', check_repository)
-        dispatcher.connect('collect-recordings', merge_recordings)
+        findrecs = FindRecordings()
+        dispatcher.connect('collect-recordings', findrecs.find_recordings)
         dispatcher.connect('recorder-error', restart_galicaster)
         dispatcher.connect('galicaster-notify-nightly', merge_delayed)
 
     except ValueError:
         pass
+
 
 def restart_galicaster(self, error_message):
     if error_message.startswith("Internal GStreamer error: negotiation problem"):
@@ -43,43 +46,51 @@ def restart_galicaster(self, error_message):
         logger.info("killing Galicaster")
         os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
 
-def merge_recordings(self, mpUri, mp):
-    dest = os.path.join(mpUri, "CHECK_REPO")
-    repofile = os.path.join(mpUri, "FILE_LIST")
-    if os.path.isfile(dest):
-        mp_list = context.get_repository()
-        rectemp = mp_list.get_rectemp_path()
-        timesfile = open(dest, "r")
-        timespan = timesfile.readline()
-        times = timespan.split(',')
-        start = datetime.datetime.strptime(times[0], "%Y-%m-%d %H:%M:%S")
-        end = datetime.datetime.strptime(times[1], "%Y-%m-%d %H:%M:%S")
-        timesfile.close()
-        repocheck = open(repofile, "a")
-        for fname in os.listdir(rectemp):
-            filepath = os.path.join(rectemp, fname)
-            if os.path.isdir(filepath):
-                for item in (os.listdir(filepath)):
-                    fileitem = os.path.join(filepath, item)
-                    timestamp = os.path.getmtime(fileitem)
-                    time = datetime.datetime.utcfromtimestamp(timestamp)
-                    if start < time and end > time:
-                        repocheck.write(filepath+"\n")
-                        break
-            if os.path.isfile(filepath):
-                filesize=os.path.getsize(filepath)
-                logger.info("found file: %s - size: %s", filepath, str(filesize))
-                if filesize:
-                    logger.info("removing file: %s - size: %s", filepath, str(filesize))
-                    os.remove(filepath)
-        repocheck.close()
-        if delay:
-            # stop ingest for now, set to delayed
-            logger.info('delaying merge of mp parts and ingest')
-            mp.setOpStatus('ingest', mediapackage.OP_DELAYED)
-            mp_list.update(mp)
-        else:
-            merge(mpUri, repofile, dest, mp_list)
+
+class FindRecordings(object):
+
+    def __init__(self):
+        self.rectemp_exists = False
+
+    def find_recordings(self, signal, mpUri, mp):
+        dest = os.path.join(mpUri, "CHECK_REPO")
+        repofile = os.path.join(mpUri, "FILE_LIST")
+        if os.path.isfile(dest):
+            mp_list = context.get_repository()
+            rectemp = mp_list.get_rectemp_path()
+            timesfile = open(dest, "r")
+            timespan = timesfile.readline()
+            times = timespan.split(',')
+            start = datetime.datetime.strptime(times[0], "%Y-%m-%d %H:%M:%S")
+            end = datetime.datetime.strptime(times[1], "%Y-%m-%d %H:%M:%S")
+            timesfile.close()
+            repocheck = open(repofile, "a")
+            for fname in os.listdir(rectemp):
+                filepath = os.path.join(rectemp, fname)
+                if os.path.isdir(filepath):
+                    for item in (os.listdir(filepath)):
+                        fileitem = os.path.join(filepath, item)
+                        timestamp = os.path.getmtime(fileitem)
+                        time = datetime.datetime.utcfromtimestamp(timestamp)
+                        if start < time and end > time:
+                            self.rectemp_exists = True
+                            repocheck.write(filepath+"\n")
+                            break
+                if os.path.isfile(filepath):
+                    filesize=os.path.getsize(filepath)
+                    logger.info("found file: %s - size: %s", filepath, str(filesize))
+                    if filesize:
+                        logger.info("removing file: %s - size: %s", filepath, str(filesize))
+                        os.remove(filepath)
+            repocheck.close()
+            if self.rectemp_exists:
+                if delay:
+                    # stop ingest for now, set to delayed
+                    logger.info('delaying merge of mp parts and ingest')
+                    mp.setOpStatus('ingest', mediapackage.OP_DELAYED)
+                    mp_list.update(mp)
+                else:
+                    merge(mpUri, repofile, dest, mp_list)
 
 
 
