@@ -38,6 +38,7 @@ class Scheduler(object):
         self.client     = mhclient
         self.logger     = logger
 
+        self.dispatcher.connect('galicaster-init', self.client_hello)
         self.dispatcher.connect('galicaster-notify-timer-short', self.do_timers_short)
         self.dispatcher.connect('galicaster-notify-timer-long',  self.do_timers_long)
 
@@ -57,10 +58,15 @@ class Scheduler(object):
             return list()
 
 
-    def do_timers_short(self, sender):
-        if self.net:
-            self.set_state()
+    def client_hello(self, sender):
+        if not self.net:
+            self.init_client()
         else:
+            self.set_state()
+
+
+    def do_timers_short(self, sender):
+        if not self.net:
             self.init_client()
 
 
@@ -178,6 +184,7 @@ class Scheduler(object):
 
             try:
                 self.client.setrecordingstate(key, 'capturing')
+                self.set_state()
             except:
                 self.logger.warning('Problems to connect to matterhorn server ')
 
@@ -195,6 +202,7 @@ class Scheduler(object):
             self.emit('stop-record', key)
             try:
                 self.client.setrecordingstate(key, 'capture_finished')
+                self.set_state()
             except:
                 self.logger.warning('Problems to connect to matterhorn server ')
                 self.net = False
