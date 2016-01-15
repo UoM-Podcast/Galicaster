@@ -25,10 +25,13 @@ worker = context.get_worker()
 conf = context.get_conf()
 
 delay = conf.get_boolean('checkrepo', 'delay_merge') or False
+pause_state_file = os.path.join(context.get_repository().get_rectemp_path(), "paused")
 
 
 def init():	
     try:
+        if os.path.exists(pause_state_file):
+            os.remove(pause_state_file)
         dispatcher = context.get_dispatcher()
         dispatcher.connect('after-process-ical', check_repository)
         findrecs = FindRecordings()
@@ -95,31 +98,40 @@ class FindRecordings(object):
 
 
 def merge(mpUri, repofile, dest, mp_list):
-        os.system(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "contrib/scripts/concat_mp ")) + mpUri + " " + repofile)
-        duration = -1
-        durpath = os.path.join(mpUri, "DURATION.txt")
-        if os.path.isfile(durpath):
-            durfile = open(durpath, "r")
-            duration = durfile.readline()
-            durfile.close()
-            os.remove(durpath)
-        os.remove(dest)
-        os.remove(repofile)
-        logger.info("merge packages: " + mpUri)    
-        for uid,mp in mp_list.iteritems():
-            if mp.getURI() == mpUri:
-                if duration == -1:
-                    duration = mp.getDuration()
-                for t in mp.getTracks():
-                    mp.remove(t)
-                filename = 'presentation.mp4'
-                dest = os.path.join(mpUri, os.path.basename(filename))
-                etype = 'video/' + dest.split('.')[1].lower()
-                flavour = 'presentation/source'
-                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration)  # FIXME MIMETYPE
-                mp.forceDuration(duration)
-                mp_list.update(mp)
-                logger.info("merging complete for UID:%s - URI: %s", uid, mpUri)
+    # while merging, create a paused file to stop check_galicaster scripts killing galicaster
+    wait = False
+    if os.path.exists(pause_state_file):
+        os.utime(pause_state_file, None)
+    else:
+        wait = True
+        open(pause_state_file, 'a').close()
+    os.system(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "contrib/scripts/concat_mp ")) + mpUri + " " + repofile)
+    duration = -1
+    durpath = os.path.join(mpUri, "DURATION.txt")
+    if os.path.isfile(durpath):
+        durfile = open(durpath, "r")
+        duration = durfile.readline()
+        durfile.close()
+        os.remove(durpath)
+    os.remove(dest)
+    os.remove(repofile)
+    logger.info("merge packages: " + mpUri)
+    for uid,mp in mp_list.iteritems():
+        if mp.getURI() == mpUri:
+            if duration == -1:
+                duration = mp.getDuration()
+            for t in mp.getTracks():
+                mp.remove(t)
+            filename = 'presentation.mp4'
+            dest = os.path.join(mpUri, os.path.basename(filename))
+            etype = 'video/' + dest.split('.')[1].lower()
+            flavour = 'presentation/source'
+            mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration)  # FIXME MIMETYPE
+            mp.forceDuration(duration)
+            mp_list.update(mp)
+            logger.info("merging complete for UID:%s - URI: %s", uid, mpUri)
+    if wait:
+        os.remove(pause_state_file)
 
 
 def merge_delayed(self):
