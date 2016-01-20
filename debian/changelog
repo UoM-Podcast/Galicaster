@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom5.9) precise; urgency=low
+galicaster (1.3.2-uom6.0) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,8 @@ galicaster (1.3.2-uom5.9) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Enhancement, paused file created when merging mediapackages. this stops external check_galicaster scripts
+  * Changed, galicaster status is sent only on init and recording start and stop
   * Enhancement, checkrepo to merge at nightly
   * Fixed, QRcode plugin not starting and ddp plugin handling screenshots
   * Enhancement, QRcode now has a leaky setting, copes with static
