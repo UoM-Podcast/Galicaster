@@ -102,8 +102,11 @@ def reingest(sender=None):
 
     for mp_id, mp in repo.iteritems():
         if not (mp.status == mediapackage.SCHEDULED or mp.status == mediapackage.RECORDING):
-            if check_state and not has_succeeded(mp_id, mp):
-                logger.info('Set mediapackage to Failed: Failed Workflow: %s', mp_id)
+            try:
+                if check_state and not has_succeeded(mp_id, mp):
+                    logger.info('Set mediapackage to Failed: Failed Workflow: %s', mp_id)
+            except RuntimeError as e:
+                logger.debug('matterhorn ' + str(e))
             logger.debug('reingest checking: %s status: %s', mp_id, mediapackage.op_status[mp.getOpStatus('ingest')])
             if mp.getOpStatus('ingest') == mediapackage.OP_FAILED or mp.getOpStatus('ingest') == mediapackage.OP_IDLE:
                 # check mediapackage status on matterhorn if needed
