@@ -74,6 +74,11 @@ class Scheduler(object):
         if self.net and self.ca_status != 'capturing':
             if self.proccess_ical():
                 self.emit('after-process-ical')
+        else:
+            if self.ca_status != 'capturing':
+                if self.proccess_existing_ical():
+                    self.emit('after-process-ical')
+
         for mp in self.repo.get_next_mediapackages():
             self.create_new_timer(mp)
 
@@ -158,6 +163,17 @@ class Scheduler(object):
 
         return True
 
+    def proccess_existing_ical(self):
+        self.logger.info('Proccess ical cache')
+        cached_events = self.last_events
+        if not cached_events:
+            return False
+
+        for event in cached_events:
+            self.logger.info('Creating MP with UID {0} from ical cache'.format(event['UID']))
+            ical.create_mp(self.repo, event)
+
+        return True
 
     def create_new_timer(self, mp):
         diff = (mp.getDate() - datetime.datetime.utcnow())
