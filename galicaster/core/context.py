@@ -87,12 +87,18 @@ def get_mhclient():
         conf = get_conf()
         multiple_ingest = conf.get_boolean('ingest', 'multiple-ingest') or False
         random_ingest = conf.get_boolean('ingest', 'random-ingest') or False
-        ingest_to_admin = conf.get_boolean('ingest', 'ingest-to-admin')
+        ingest_to_admin = conf.get_boolean('ingest', 'ingest-to-admin') or False
+        down_time = conf.get('ingest', 'down-time') or None
+        down_time_all = conf.get_boolean('down-time', 'all') or False
+        down_time_ingest = conf.get_boolean('down-time', 'ingest') or False
+        down_time_ical = conf.get_boolean('down-time', 'ical') or False
+        down_time_status = conf.get_boolean('down-time', 'status') or False
+        down_time_services = conf.get_boolean('down-time', 'services') or False
         if get_conf().get_boolean("ingest", "active"):
-            mhclient = MHHTTPClient(conf.get('ingest', 'host'), 
-                                    conf.get('ingest', 'username'), 
-                                    conf.get('ingest', 'password'), 
-                                    conf.hostname, 
+            mhclient = MHHTTPClient(conf.get('ingest', 'host'),
+                                    conf.get('ingest', 'username'),
+                                    conf.get('ingest', 'password'),
+                                    conf.hostname,
                                     conf.get('ingest', 'address'),
                                     multiple_ingest,
                                     random_ingest,
@@ -101,7 +107,13 @@ def get_mhclient():
                                     conf.get('ingest', 'workflow-parameters'),
                                     conf.get('heartbeat', 'short'),
                                     conf.get('heartbeat', 'long'),
-                                    get_logger())
+                                    get_logger(),
+                                    down_time,
+                                    down_time_all,
+                                    down_time_ingest,
+                                    down_time_ical,
+                                    down_time_status,
+                                    down_time_services)
         else:
             mhclient = None
         __galicaster_context['mhclient'] = mhclient

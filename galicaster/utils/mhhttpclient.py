@@ -16,6 +16,7 @@ import json
 import urllib
 import socket
 import random
+import datetime
 #IDEA use cStringIO to improve performance
 from StringIO import StringIO
 import pycurl
@@ -41,7 +42,8 @@ class MHHTTPClient(object):
 
     def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False,
                  random_ingest=False, ingest_to_admin=True, workflow='full', workflow_parameters={'trimHold':'true'},
-                 polling_short=10, polling_long=60, logger=None):
+                 polling_short=10, polling_long=60, logger=None, down_time=None, down_time_all=False,
+                 down_time_ingest=False, down_time_ical=False, down_time_status=False, down_time_services=False):
         """
         Arguments:
 
@@ -75,10 +77,22 @@ class MHHTTPClient(object):
         self.polling_config = polling_short
         self.response = {'Status-Code': '', 'Content-Type': '', 'ETag': ''}
         self.ical_etag = -1
+        self.down_time = down_time
+        self.down_time_all = down_time_all
+        self.down_time_ingest = down_time_ingest
+        self.down_time_ical = down_time_ical
+        self.down_time_status = down_time_status
+        self.down_time_services = down_time_services
 
+    def isdowntime(self):
+        quiet = self.down_time.split(';')
+        now = datetime.datetime.utcnow()
+        if datetime.datetime.strptime(quiet[0], '%d-%m-%Y %H:%M') <= now and datetime.datetime.strptime(quiet[1], '%d-%m-%Y %H:%M') >=now:
+            raise RuntimeError('scheduled downtime, skipping call to Opencast')
 
     def __call(self, method, endpoint, params={}, postfield={}, urlencode=True, server=None, timeout=True, headers={}):
-
+        if self.down_time_all:
+            self.isdowntime()
         theServer = server or self.server
         c = pycurl.Curl()
         b = StringIO()
@@ -131,13 +145,19 @@ class MHHTTPClient(object):
 
 
     def whoami(self):
+        if self.down_time_status:
+            self.isdowntime()
         return json.loads(self.__call('GET', ME_ENDPOINT))
 
     def welcome(self):
+        if self.down_time_status:
+            self.isdowntime()
         return self.__call('GET', INIT_ENDPOINT)
 
 
     def ical(self):
+        if self.down_time_ical:
+            self.isdowntime()
         icalendar = self.__call('GET', ICAL_ENDPOINT, {'hostname': self.hostname}, headers={'If-None-Match': self.ical_etag})
 
         if self.response['Status-Code'] == 304:
@@ -152,6 +172,8 @@ class MHHTTPClient(object):
 
 
     def setstate(self, state):
+        if self.down_time_status:
+            self.isdowntime()
         """
         Los posibles estados son: shutting_down, capturing, uploading, unknown, idle
         """
@@ -160,6 +182,8 @@ class MHHTTPClient(object):
 
 
     def setrecordingstate(self, recording_id, state):
+        if self.down_time_status:
+            self.isdowntime()
         """
         Los posibles estados son: unknown, capturing, capture_finished, capture_error, manifest, 
         manifest_error, manifest_finished, compressing, compressing_error, uploading, upload_finished, upload_error
@@ -168,6 +192,8 @@ class MHHTTPClient(object):
 
 
     def setconfiguration(self, capture_devices):
+        if self.down_time_status:
+            self.isdowntime()
         client_conf_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                              <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
                              <properties version="1.0">{0}</properties>"""
@@ -229,6 +255,8 @@ class MHHTTPClient(object):
 
 
     def _get_endpoints(self, service_type):
+        if self.down_time_services:
+            self.isdowntime()
         if self.logger:
             self.logger.debug('Looking up Matterhorn endpoint for %s', service_type)
         services = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {'serviceType': service_type}, {},
@@ -246,6 +274,8 @@ class MHHTTPClient(object):
         return self.workflow_server
 
     def search_by_mp_id(self, mp_id):
+        if self.down_time_services:
+            self.isdowntime()
         """ Returns result of workflow search for mediapackage workflow id """
         workflow_server = self._get_workflow_server()
         result = self.__call('GET', WORKFLOW_ENDPOINT, {'id': mp_id}, {}, True, workflow_server, True)
@@ -277,6 +307,8 @@ class MHHTTPClient(object):
 
 
     def get_ingest_server(self):
+        if self.down_time_ingest:
+            self.isdowntime()
         """ get the ingest server information from the admin node: 
         if there are more than one ingest servers the first from the list will be used
         as they are returned in order of their load, if there is only one returned this 
@@ -310,12 +342,16 @@ class MHHTTPClient(object):
 
 
     def getseries(self):
+        if self.down_time_services:
+            self.isdowntime()
         """ Get all series upto 100"""
         # TODO No limit, to get all
         return self.__call('GET', SERIES_ENDPOINT, {'count': 100})
 
 
     def get_single_series(self, series_id):
+        if self.down_time_services:
+            self.isdowntime()
         """returns a dict of the series identifier and title for a single series"""
         series_call = self.__call('GET', SERIES_IDV_ENDPOINT, {'id': series_id})
         series_result = json.loads(series_call)
