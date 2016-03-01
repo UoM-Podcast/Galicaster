@@ -58,6 +58,7 @@ GC_PAUSED = 5
 GC_STOP = 6
 GC_BLOCKED = 7
 GC_ERROR = 9
+GC_RECORDING_PAUSED = 10
 
 # No-op function for i18n
 def N_(string): return string
@@ -72,6 +73,7 @@ STATUS = [  [N_("Initialization"),"#F7F6F6"],
             [N_("Blocked"),"#F7F6F6"],
             [N_("Waiting"),"#F7F6F6"],
             [N_("Error"),"#FF0000"],
+            [N_("Recording"),"#F7F6F6"]
             ]
 
 
@@ -96,7 +98,7 @@ class RecorderClassUI(gtk.Box):
   
         logger.info("Creating Recording Area")
         gtk.Box.__init__(self)
-	builder = gtk.Builder()
+        builder = gtk.Builder()
         builder.add_from_file(get_ui_path('recorder.glade'))
        
         self.repo = context.get_repository()
@@ -324,7 +326,7 @@ class RecorderClassUI(gtk.Box):
     def on_rec(self,button=None, pre_filled=False): 
         """Manual Recording """
         logger.info("Recording")
-        self.dispatcher.emit("starting-record")
+        self.dispatcher.emit("starting-record", self)
         self.recorder.record()
         self.mediapackage.status=mediapackage.RECORDING
         now = datetime.datetime.utcnow().replace(microsecond=0)
@@ -453,7 +455,7 @@ class RecorderClassUI(gtk.Box):
             self.mediapackage = self.repo.get(self.current_mediapackage)
             self.on_rec() 
         
-        elif self.status in [ GC_RECORDING, GC_PAUSED ] :
+        elif self.status in [GC_RECORDING, GC_PAUSED, GC_RECORDING_PAUSED]:
 
             if self.allow_overlap:
                 pass
@@ -553,7 +555,7 @@ class RecorderClassUI(gtk.Box):
         if (self.error_count > 5):
             logger.error("Error. Show message ({})".format(self.error_count))
             self.show_pipeline_error(origin, error_message)
-        elif(self.status not in [ GC_RECORDING, GC_PAUSED ]):
+        elif(self.status not in [GC_RECORDING, GC_PAUSED, GC_RECORDING_PAUSED]):
             if self.error_count == 1:
                 self.repo.save_crash_recordings()
             logger.error("Error, retry intent {}".format(self.error_count))
@@ -633,18 +635,32 @@ class RecorderClassUI(gtk.Box):
 
     def timer_launch_thread(self):
         """Thread handling the recording elapsed time timer."""
+
         thread_id= self.timer_thread_id
+        self.initial_time=self.recorder.get_time()
+        self.initial_datetime=datetime.datetime.utcnow().replace(microsecond=0)
+        gtk.gdk.threads_enter()
+        gtk.gdk.threads_leave()
+        self.paused_time = datetime.timedelta(0, 0)
+
         rec_title = self.gui.get_object("recording1")
         rec_elapsed = self.gui.get_object("recording3")
-             
-        while thread_id == self.timer_thread_id:            
-            gtk.gdk.threads_enter()
-            if rec_title.get_text() != self.mediapackage.getTitle():
-                rec_title.set_text(self.mediapackage.getTitle())
-            msec = datetime.timedelta(microseconds=(self.recorder.get_recorded_time()/1000))
-            rec_elapsed.set_text(_("Elapsed Time: ") + readable.long_time(msec))
-            gtk.gdk.threads_leave()
-            time.sleep(0.5)          
+
+        while thread_id == self.timer_thread_id:
+        #while True:
+            actual_time=self.recorder.get_time()
+            timer=(actual_time-self.initial_time)/gst.SECOND
+            if self.status in [GC_PAUSED, GC_RECORDING_PAUSED]:
+                self.paused_time = self.paused_time + datetime.timedelta(0, 0, 200000)
+            dif = datetime.datetime.utcnow() - self.initial_datetime - self.paused_time
+
+            if thread_id == self.timer_thread_id:
+                gtk.gdk.threads_enter()
+                if rec_title.get_text() != self.mediapackage.getTitle():
+                    rec_title.set_text(self.mediapackage.getTitle())
+                rec_elapsed.set_text("Elapsed Time: " + readable.long_time(dif))
+                gtk.gdk.threads_leave()
+            time.sleep(0.2)
         return True
 
     def scheduler_launch_thread(self):

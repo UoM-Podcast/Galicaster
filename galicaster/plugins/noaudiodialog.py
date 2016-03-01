@@ -101,7 +101,7 @@ def activate_hidden(button, dialog):
         __check_dialog()
 
 
-def deactivate_hidden_and_check(element=None):
+def deactivate_hidden_and_check(element=None, sender=None):
     """
     When a signal is recived, deactivate the keep hidden feature and shows dialog if necessary
     """

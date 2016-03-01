@@ -86,6 +86,8 @@ class Recorder(object):
             self.bins[name] = Klass(bin)
             self.pipeline.add(self.bins[name])
 
+        self.dispatcher.emit("gst-pipeline-created", self.pipeline, self.bus, self.bins)
+
     def get_status(self):
         return self.pipeline.get_state()
 
@@ -155,11 +157,19 @@ class Recorder(object):
                 valve = bin.changeValve(False)
         self.__start_record_time = self.__query_position()
 
+    # doesn't pause pipeline, just stops recording
+    def pause_record(self):
+        if self.pipeline.get_state()[1] == gst.STATE_PLAYING:
+            for bin_name, bin in self.bins.iteritems():
+                valve = bin.changeValve(True)
+            # Get clock
+
     def stop_record(self):
-        self.__duration = self.__query_position() - self.__start_record_time
         a = gst.structure_from_string('letpass')
         event = gst.event_new_custom(gst.EVENT_EOS, a)
         for bin_name, bin in self.bins.iteritems():
+            # make sure valves are open in case pause_record was called last
+            bin.changeValve(False)
             resultado = bin.send_event_to_src(event)
             #if resultado: 
             #    print "EOS sended to src of: " + bin_name
@@ -243,6 +253,9 @@ class Recorder(object):
     def _on_sync_message(self, bus, message):
         if message.structure is None:
             return
+
+        self.dispatcher.emit("gst-sync-message", self, bus, message)
+
         if message.structure.get_name() == 'prepare-xwindow-id':
             name = message.src.get_property('name')
             logger.debug("on sync message 'prepare-xwindow-id' %r", name)

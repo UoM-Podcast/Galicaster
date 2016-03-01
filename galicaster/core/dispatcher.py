@@ -42,7 +42,7 @@ gobject.signal_new('pr', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
 #REC
 gobject.signal_new('upcoming-recording', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
 gobject.signal_new('start-record', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) ) #FIXME define where and wich signals emit on scheduled/manual record
-gobject.signal_new('starting-record', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
+gobject.signal_new('starting-record', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
 gobject.signal_new('stop-record', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
 gobject.signal_new('restart-preview', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
 gobject.signal_new('update-rec-vumeter', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
@@ -52,7 +52,9 @@ gobject.signal_new('reload-profile', Dispatcher, gobject.SIGNAL_RUN_LAST, gobjec
 gobject.signal_new('start-preview', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
 # NEW ON 1.3
 gobject.signal_new('recording-closed', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,) )
-
+#RECORDER/GSTREAMER
+gobject.signal_new('gst-pipeline-created', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT) )
+gobject.signal_new('gst-sync-message', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT,gobject.TYPE_PYOBJECT) )
 #AUDIO
 gobject.signal_new('audio-mute', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
 gobject.signal_new('audio-recovered', Dispatcher, gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, () )
