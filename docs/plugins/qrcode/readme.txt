@@ -23,8 +23,6 @@ to help tune performance.
 Using this plugin to do the editing on the Opencast server was planned but not implemented therefore the options
 `mp_add_edits` and `mp_add_smil` are best left as `False`
 
-dual video capture using the same `device` e.g. `v4l2` will cause only one stream to be enabled with QRcode editing.
-
 Loading
 -------
 

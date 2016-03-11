@@ -237,7 +237,6 @@ class QRCodeScanner():
         
     # find the video device with the configured flavour
     # and add the zbar pipe to that
-    # TODO if dual stream video devices have the same name i.e. 'v4l2' then only one is chosen
     def qrcode_add_pipeline(self, recorder, pipeline, bus, bins):
         for name, bin in bins.iteritems():
             if bin.has_video:
