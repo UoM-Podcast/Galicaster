@@ -270,9 +270,9 @@ class QRCodeScanner():
                 zbar_filter.set_property("caps", zbar_caps)
 
                 tee_name = 'gc-' + device + '-tee'
-                tee = pipeline.get_by_name(tee_name)
+                tee = bin.get_by_name(tee_name)
 
-                pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                bin.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
                       zbar_videoscale, zbar_filter,
                       zbar_zbar, zbar_fakesink)
                 gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs,
