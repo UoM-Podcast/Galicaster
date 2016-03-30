@@ -242,11 +242,20 @@ class QRCodeScanner():
                 zbar_filter.set_property("caps", zbar_caps)
 
                 tee_name = 'gc-' + device + '-tee'
-                tee = pipeline.get_by_name(tee_name)
+                # Blackmagic cards and multiple video streams will not work
+                if device == 'blackmagic':
+                    tee = pipeline.get_by_name(tee_name)
 
-                pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
-                      zbar_videoscale, zbar_filter,
-                      zbar_zbar, zbar_fakesink)
+                    pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                          zbar_videoscale, zbar_filter,
+                          zbar_zbar, zbar_fakesink)
+                else:
+                    tee = bin.get_by_name(tee_name)
+
+                    bin.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                          zbar_videoscale, zbar_filter,
+                          zbar_zbar, zbar_fakesink)
+
                 gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs,
                       zbar_videoscale, zbar_filter,
                       zbar_zbar, zbar_fakesink)
