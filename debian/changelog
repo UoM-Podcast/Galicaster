@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom6.1) precise; urgency=low
+galicaster (1.3.2-uom6.2) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,7 @@ galicaster (1.3.2-uom6.1) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Fixed, blackmagic cards cannot use bin level pipeline add of qrcode. multiple bin qrcode.
   * Enhancement, toggle contact to admin during times X and Y for each service
   * Fixed, schedule ical feed from cached ical files
   * Enhancement, paused file created when merging mediapackages. this stops external check_galicaster scripts
