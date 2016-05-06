@@ -47,6 +47,7 @@ def init():
         dispatcher.connect('recording-closed', failover_audio)
         dispatcher.connect('starting-record', record)
         dispatcher.connect('restart-preview', stop)
+        dispatcher.connect('update-rec-status', follow_pause)
         set_pipeline()
     except ValueError:
         pass
@@ -89,6 +90,14 @@ def record(self, recorderui=None):
 def stop(self):
     # stop recording
     pipe.set_state(gst.STATE_NULL)
+
+
+def follow_pause(element, state):
+    # pause the pipeline if paused in Galicaster
+    if state == 'Paused':
+        pipe.set_state(gst.STATE_PAUSED)
+    if state == '  Recording  ':
+        pipe.set_state(gst.STATE_PLAYING)
 
 
 def filecount(files):
