@@ -21,10 +21,13 @@ from galicaster.core import context
 from galicaster.mediapackage import mediapackage
 
 logger = context.get_logger()
+conf = context.get_conf()
 rms_list = []
 FAIL_DIR = os.getenv('HOME') + '/gc_failover'
 FAILOVER_FILE = FAIL_DIR + '/presenter.mp3'
 FAILOVER_MIMETYPE = 'audio/mp3'
+temp_failaudio = 'failoveraudio.mp3_tmp'
+flavour = 'presenter/source'
 default_max_amplitude = '-50'
 default_device = 'default'
 default_track = '1'
@@ -40,9 +43,9 @@ def init():
         global MAX_AMPLITUDE
         global audio_track
         dispatcher = context.get_dispatcher()
-        device = context.get_conf().get('failovermic', 'device')
-        MAX_AMPLITUDE = context.get_conf().get('failovermic', 'failover_threshold')
-        audio_track = context.get_conf().get('failovermic', 'audio_track')
+        device = conf.get('failovermic', 'device')
+        MAX_AMPLITUDE = conf.get('failovermic', 'failover_threshold')
+        audio_track = conf.get('failovermic', 'audio_track')
         dispatcher.connect('update-rec-vumeter', check_pipeline_amp)
         dispatcher.connect('recording-closed', failover_audio)
         dispatcher.connect('starting-record', record)
@@ -117,7 +120,7 @@ def merge(tempdir):
     y.append(y.pop(0))
     input_files = '"' + 'concat:' + '|'.join(y) + '"'
     output_file = FAIL_DIR + '/tempmerge.mp3'
-    cmd = "avconv -y -i {0} -acodec copy {1}".format(input_files, output_file)
+    cmd = "ffmpeg -y -i {0} -acodec copy {1}".format(input_files, output_file)
     os.system(cmd)
     shutil.move('{0}'.format(output_file), FAILOVER_FILE)
     logger.info("merged failover audio files")
@@ -125,7 +128,7 @@ def merge(tempdir):
 
 def get_audio_track():
     track_list = []
-    tracks = context.get_conf().get_current_profile().tracks
+    tracks = conf.get_current_profile().tracks
     for track in tracks:
         if track.flavor == 'presenter':
             track_list.append(track.file)
@@ -142,7 +145,6 @@ def remove_temp(tempdir, tmpf):
 
 
 def failover_audio(self, mpUri):
-    flavour = 'presenter/source'
     mp_list = context.get_repository()
     for uid,mp in mp_list.iteritems():
         if mp.getURI() == mpUri:
@@ -157,32 +159,57 @@ def failover_audio(self, mpUri):
             else:
                 threshold = MAX_AMPLITUDE
             if pipeline_amp <= float(threshold):
+
                 # if multiple temp mp3 files, merge
                 if filecount(FAIL_DIR) > 1:
                     merge(FAIL_DIR)
-                logger.info('audio quiet - will be replaced')
-                for t in mp.getTracks():
-                    mimetype = t.getMimeType()
-                    logger.debug('Examine track type %s', mimetype)
-                    if mimetype.split('/')[0].lower() == 'audio':
-                        mp.remove(t)
-                    else:
-                        if mimetype.split('/')[1].lower() == 'mp4':
-                            t_path = t.getURI()
-                            output_file = t_path.split('.')[0] + '_1.' + t_path.split('.')[1]
-                            cmd = "avconv -y -i {0} -acodec copy -an {1}".format(t_path, output_file)
-                            os.system(cmd)
-                            os.remove(t_path)
-                            os.rename(output_file, t_path)
-                filename = get_audio_track()
-                dest = os.path.join(mpUri, os.path.basename(filename))
-                shutil.copyfile(FAILOVER_FILE, dest)
-                mp.add(dest, mediapackage.TYPE_TRACK, flavour, FAILOVER_MIMETYPE, mp.getDuration())
-                mp_list.update(mp)
-                logger.info('Replaced quite audio with failover recording UID:%s - URI: %s', uid, mpUri)
+
+                #copy the failover audio file to the mp
+                mpdest = os.path.join(mpUri, os.path.basename(temp_failaudio))
+                shutil.copyfile(FAILOVER_FILE, mpdest)
                 remove_temp(FAIL_DIR, temp_amp)
+
+                # if delayed don't finish the audio replacement yet
+                if mp.getOpStatus('ingest') == mediapackage.OP_DELAYED:
+                    pass
+                else:
+                    replace_audio(mp)
+
             else:
                 remove_temp(FAIL_DIR, temp_amp)
+
+
+def replace_audio(mp):
+    mp_list = context.get_repository()
+    mpUri = mp.getURI()
+    logger.info('audio quiet - will be replaced')
+    for t in mp.getTracks():
+        mimetype = t.getMimeType()
+        logger.debug('Examine track type %s', mimetype)
+        if mimetype.split('/')[0].lower() == 'audio':
+            mp.remove(t)
+        else:
+            if mimetype.split('/')[1].lower() == 'mp4':
+                t_path = t.getURI()
+                output_file = t_path.split('.')[0] + '_1.' + t_path.split('.')[1]
+                cmd = "ffmpeg -y -i {0} -vcodec copy -an {1}".format(t_path, output_file)
+                os.system(cmd)
+                os.remove(t_path)
+                os.rename(output_file, t_path)
+    filename = get_audio_track()
+    dest = os.path.join(mpUri, os.path.basename(filename))
+    shutil.move(os.path.join(mpUri, os.path.basename(temp_failaudio)), dest)
+    mp.add(dest, mediapackage.TYPE_TRACK, flavour, FAILOVER_MIMETYPE, mp.getDuration())
+    mp_list.update(mp)
+    logger.info('Replaced quite audio with failover recording URI: %s', mpUri)
+
+
+def do_async_check(mp, mpUri):
+    # look for failover audio file
+    temp_failaudio_loc = os.path.join(mpUri, os.path.basename(temp_failaudio))
+    if os.path.exists(temp_failaudio_loc):
+        replace_audio(mp)
+
 
 
 def check_pipeline_amp(self, valor):

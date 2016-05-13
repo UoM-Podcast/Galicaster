@@ -19,6 +19,7 @@ import os
 
 from galicaster.core import context
 from galicaster.mediapackage import mediapackage
+from galicaster.plugins import failovermic
 
 logger = context.get_logger()
 worker = context.get_worker()
@@ -145,6 +146,7 @@ def merge_delayed(self):
                 repofile = os.path.join(mpUri, "FILE_LIST")
                 if os.path.exists(repofile):
                     merge(mpUri, repofile, dest, repo)
+                    failovermic.do_async_check(mp, mpUri)
                     logger.info('Starting Ingest of merge delayed mediapackage: %s', mp_id)
                     worker.ingest(mp)
 
