@@ -211,54 +211,62 @@ class QRCodeScanner():
     # and add the zbar pipe to that
     def qrcode_add_pipeline(self, recorder, pipeline, bus, bins):
         for name, bin in bins.iteritems():
-            if bin.has_video:
-                device = bin.options['device']
+            try:
+                qrcode_bin_option = bin.options['qrcode']
+            except KeyError:
+                qrcode_bin_option = 'True'
+            if qrcode_bin_option == 'False':
+                self.logger.info('qrcode disabled on bin: {}'.format(name))
+                pass
+            else:
+                if bin.has_video:
+                    device = bin.options['device']
 
-                # Create the following subpipe:
-                # queue name=zbar-queue ! valve name=zbar-valve drop=False
-                # ! ffmpegcolorspace ! videoscale ! capsfilter name=zbar-filter
-                # ! zbar name=zbar message=True ! fakesink'
+                    # Create the following subpipe:
+                    # queue name=zbar-queue ! valve name=zbar-valve drop=False
+                    # ! ffmpegcolorspace ! videoscale ! capsfilter name=zbar-filter
+                    # ! zbar name=zbar message=True ! fakesink'
 
-                zbar_queue = gst.element_factory_make("queue", "zbar-{}-queue".format(device))
-                zbar_valve = gst.element_factory_make("valve", "zbar-{}-valve".format(device))
-                zbar_ffmpegcs = gst.element_factory_make("ffmpegcolorspace")
-                zbar_videoscale = gst.element_factory_make("videoscale")
-                zbar_filter = gst.element_factory_make("capsfilter", "zbar-{}-filter".format(device))
-                zbar_zbar = gst.element_factory_make("zbar", "zbar-{}-zbar".format(device))
-                zbar_fakesink = gst.element_factory_make("fakesink")
+                    zbar_queue = gst.element_factory_make("queue", "zbar-{}-queue".format(device))
+                    zbar_valve = gst.element_factory_make("valve", "zbar-{}-valve".format(device))
+                    zbar_ffmpegcs = gst.element_factory_make("ffmpegcolorspace")
+                    zbar_videoscale = gst.element_factory_make("videoscale")
+                    zbar_filter = gst.element_factory_make("capsfilter", "zbar-{}-filter".format(device))
+                    zbar_zbar = gst.element_factory_make("zbar", "zbar-{}-zbar".format(device))
+                    zbar_fakesink = gst.element_factory_make("fakesink")
 
-                if self.drop_frames:
-                    zbar_queue.set_property('leaky', 2)
-                zbar_queue.set_property('max-size-buffers', self.queue_buffers)
+                    if self.drop_frames:
+                        zbar_queue.set_property('leaky', 2)
+                    zbar_queue.set_property('max-size-buffers', self.queue_buffers)
 
-                expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size
-                if self.rescale != 'source' and re.match(expr,self.rescale):
-                    wh = [int(a) for a in self.rescale.split(re.search('[,x:]', self.rescale).group())]
-                    zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(wh[0], wh[1]))
+                    expr='[0-9]+[\,x\:][0-9]+'  # Parse custom size
+                    if self.rescale != 'source' and re.match(expr,self.rescale):
+                        wh = [int(a) for a in self.rescale.split(re.search('[,x:]', self.rescale).group())]
+                        zbar_caps = gst.Caps("video/x-raw-yuv,width={},height={}".format(wh[0], wh[1]))
+                        zbar_filter.set_property("caps", zbar_caps)
+                    else :
+                        zbar_caps = gst.Caps("video/x-raw-yuv")
+
                     zbar_filter.set_property("caps", zbar_caps)
-                else :
-                    zbar_caps = gst.Caps("video/x-raw-yuv")
 
-                zbar_filter.set_property("caps", zbar_caps)
+                    tee_name = 'gc-' + device + '-tee'
+                    # Blackmagic cards and multiple video streams will not work
+                    if device == 'blackmagic':
+                        tee = pipeline.get_by_name(tee_name)
 
-                tee_name = 'gc-' + device + '-tee'
-                # Blackmagic cards and multiple video streams will not work
-                if device == 'blackmagic':
-                    tee = pipeline.get_by_name(tee_name)
+                        pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                              zbar_videoscale, zbar_filter,
+                              zbar_zbar, zbar_fakesink)
+                    else:
+                        tee = bin.get_by_name(tee_name)
 
-                    pipeline.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                        bin.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
+                              zbar_videoscale, zbar_filter,
+                              zbar_zbar, zbar_fakesink)
+
+                    gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs,
                           zbar_videoscale, zbar_filter,
                           zbar_zbar, zbar_fakesink)
-                else:
-                    tee = bin.get_by_name(tee_name)
-
-                    bin.add(zbar_queue, zbar_valve, zbar_ffmpegcs,
-                          zbar_videoscale, zbar_filter,
-                          zbar_zbar, zbar_fakesink)
-
-                gst.element_link_many(tee, zbar_queue, zbar_valve, zbar_ffmpegcs,
-                      zbar_videoscale, zbar_filter,
-                      zbar_zbar, zbar_fakesink)
 
         self.pipeline = pipeline
         self.bins = bins
