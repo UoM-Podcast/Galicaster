@@ -34,7 +34,7 @@ def changemp(self, action, mp):
         series_dict = {'identifier': series, 'title': series_title}
         mp.setSeries(series_dict)
         logger.info('series {0} - {1} was set for manual recording {2}'.format(series, series_title, mp.getIdentifier()))
-    if title and mp.manual:
+    if title:
         mp.setTitle(title + ' ' + mp.getStartDateAsString())
     try:
         workflow = occap[oc_definition]
