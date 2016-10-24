@@ -94,11 +94,21 @@ class DDP(Thread):
             self.cam_available = 0
         else:
             self.cam_available = int(cam_available)
-
-        if conf.get_boolean('ddp', 'existing_stream'):
-            self._stream_host = conf.get_boolean('ddp', 'existing_stream')
+        # Getting audiostream params. either using existing audiostreaming server like icecast or the audiostream plugin
+        if conf.get('ddp', 'existing_stream_host'):
+            self._stream_host = conf.get('ddp', 'existing_stream_host')
         else:
             self._stream_host = self.ip
+
+        if conf.get_int('ddp', 'existing_stream_port'):
+            self._audiostream_port = conf.get('ddp', 'existing_stream_port')
+        else:
+            self._audiostream_port = conf.get('audiostream', 'port') or 31337
+
+        if conf.get('ddp', 'existing_stream_key'):
+            self.stream_key = conf.get('ddp', 'existing_stream_key')
+        else:
+            self.stream_key = uuid.uuid4().get_hex()
 
         if conf.get('ddp', 'extra_params'):
             self.extra_params_list = conf.get('ddp', 'extra_params').split(';')
@@ -293,7 +303,6 @@ class DDP(Thread):
     def on_subscribed(self, subscription):
         if(subscription == 'GalicasterControl'):
             me = self.client.find_one('rooms')
-            stream_key = uuid.uuid4().get_hex()
             # Data to push when inserting or updating
             data = {
                 'displayName': self.displayName,
@@ -306,7 +315,7 @@ class DDP(Thread):
                 'stream': {
                     'host': self._stream_host,
                     'port': self._audiostream_port,
-                    'key': stream_key
+                    'key': self.stream_key
                 }
             }
             # Parse extra Meteor Mongodb collection elements and append
