@@ -101,7 +101,7 @@ class DDP(Thread):
             self._stream_host = self.ip
 
         if conf.get('ddp', 'extra_params'):
-            self.extra_params_list = conf.get('ddp', 'extra_params').split(',')
+            self.extra_params_list = conf.get('ddp', 'extra_params').split(';')
         else:
             self.extra_params_list = []
 
