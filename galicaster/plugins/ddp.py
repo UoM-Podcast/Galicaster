@@ -101,9 +101,9 @@ class DDP(Thread):
             self._stream_host = self.ip
 
         if conf.get_int('ddp', 'existing_stream_port'):
-            self._audiostream_port = conf.get('ddp', 'existing_stream_port')
+            self._audiostream_port = conf.get_int('ddp', 'existing_stream_port')
         else:
-            self._audiostream_port = conf.get('audiostream', 'port') or 31337
+            self._audiostream_port = conf.get_int('audiostream', 'port') or 31337
 
         if conf.get('ddp', 'existing_stream_key'):
             self.stream_key = conf.get('ddp', 'existing_stream_key')
@@ -114,6 +114,7 @@ class DDP(Thread):
             self.extra_params_list = conf.get('ddp', 'extra_params').split(';')
         else:
             self.extra_params_list = []
+        logger.info('audiostream URI: {}'.format('http://' + self._stream_host + ':' + str(self._audiostream_port) + '/' + self.stream_key))
 
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
