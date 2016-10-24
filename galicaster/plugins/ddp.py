@@ -36,7 +36,6 @@ from PIL import Image
 
 from galicaster.core import context
 
-
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
 logger = context.get_logger()
@@ -65,7 +64,7 @@ class DDP(Thread):
         self.displayName = conf.get('ddp', 'room_name')
         self.vu_min = -50
         self.vu_range = 50
-        self.do_vu = 0
+        self.vu_data = 0
         self.last_vu = None
         self.ip = conf.get('ingest', 'address')
         self.id = conf.get('ingest', 'hostname')
@@ -73,10 +72,6 @@ class DDP(Thread):
         self._password = conf.get('ddp', 'password')
         self._http_host = conf.get('ddp', 'http_host')
         self._audiostream_port = conf.get('audiostream', 'port') or 31337
-        if conf.get_boolean('ddp', 'existing_stream'):
-            self._stream_host = conf.get_boolean('ddp', 'existing_stream')
-        else:
-            self._stream_host = self.ip
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot_file = conf.get('ddp', 'existing_screenshot')
         self.high_quality = conf.get_boolean('ddp', 'hq_snapshot')
@@ -100,8 +95,19 @@ class DDP(Thread):
         else:
             self.cam_available = int(cam_available)
 
+        if conf.get_boolean('ddp', 'existing_stream'):
+            self._stream_host = conf.get_boolean('ddp', 'existing_stream')
+        else:
+            self._stream_host = self.ip
+
+        if conf.get('ddp', 'extra_params'):
+            self.extra_params_list = conf.get('ddp', 'extra_params').split(',')
+        else:
+            self.extra_params_list = []
+
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
+        dispatcher.connect('timer-short', self.update_vu)
         dispatcher.connect('timer-short', self.heartbeat)
         dispatcher.connect('recorder-started', self.on_start_recording)
         dispatcher.connect('recorder-stopped', self.on_stop_recording)
@@ -184,7 +190,7 @@ class DDP(Thread):
     def on_init(self, data):
         self.update_images(1.5)
 
-    def update_images(self, delay=0):
+    def update_images(self, delay=0.0):
         worker = Thread(target=self._update_images, args=(delay,))
         worker.start()
 
@@ -224,20 +230,20 @@ class DDP(Thread):
             logger.warn('Unable to post images')
 
     def vumeter(self, element, data, data_chan2, vu_bool):
-        if self.do_vu == 0:
-            if data == "Inf":
+        if data == "Inf":
+            data = 0
+        else:
+            if data < -self.vu_range:
+                data = -self.vu_range
+            elif data > 0:
                 data = 0
-            else:
-                if data < -self.vu_range:
-                    data = -self.vu_range
-                elif data > 0:
-                    data = 0
-            data = int(((data + self.vu_range) / float(self.vu_range)) * 100)
-            if data != self.last_vu:
-                update = {'vumeter': data}
+        self.vu_data = int(((data + self.vu_range) / float(self.vu_range)) * 100)
+
+    def update_vu(self, element):
+        if self.vu_data != self.last_vu:
+                update = {'vumeter': self.vu_data}
                 self.update('rooms', {'_id': self.id}, {'$set': update})
-                self.last_vu = data
-        self.do_vu = (self.do_vu + 1) % 20
+                self.last_vu = self.vu_data
 
     def on_rec_status_update(self, element, data):
         if data == 'paused':
@@ -288,7 +294,6 @@ class DDP(Thread):
         if(subscription == 'GalicasterControl'):
             me = self.client.find_one('rooms')
             stream_key = uuid.uuid4().get_hex()
-
             # Data to push when inserting or updating
             data = {
                 'displayName': self.displayName,
@@ -304,6 +309,11 @@ class DDP(Thread):
                     'key': stream_key
                 }
             }
+            # Parse extra Meteor Mongodb collection elements and append
+            for params in self.extra_params_list:
+                param = params.split(':')
+                data[param[0]] = param[1]
+
             if self.currentMediaPackage:
                 data['currentMediaPackage'] = self.currentMediaPackage
             if self.currentProfile:
