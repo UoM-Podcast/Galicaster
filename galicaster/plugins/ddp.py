@@ -7,7 +7,9 @@ import socket
 import subprocess
 from threading import Event, Thread
 import time
+import uuid
 import gtk
+from urlparse import urlparse
 from random import randint
 
 import gobject
@@ -77,6 +79,23 @@ class DDP(Thread):
             self.cam_available = 0
         else:
             self.cam_available = int(cam_available)
+        # Getting audiostream params. either using existing audiostreaming server like icecast or the audiostream plugin
+        if conf.get('ddp', 'existing_stream_host'):
+            self._stream_host = conf.get('ddp', 'existing_stream_host')
+        else:
+            self._stream_host = urlparse(self._http_host).hostname
+
+        if conf.get_int('ddp', 'existing_stream_port'):
+            self._audiostream_port = conf.get_int('ddp', 'existing_stream_port')
+        else:
+            self._audiostream_port = 8000
+
+        if conf.get('ddp', 'existing_stream_key'):
+            self.stream_key = conf.get('ddp', 'existing_stream_key')
+        else:
+            self.stream_key = self.displayName
+
+        logger.info('audiostream URI: {}'.format('http://' + self._stream_host + ':' + str(self._audiostream_port) + '/' + self.stream_key))
 
         self.audiofaders = []
         faders = conf.get('ddp', 'audiofaders').split()
@@ -351,6 +370,11 @@ class DDP(Thread):
                 'camAvailable': self.cam_available,
                 'supportGroup': self.support_group,
                 'inputs': self.inputs(),
+                'stream': {
+                    'host': self._stream_host,
+                    'port': self._audiostream_port,
+                    'key': self.stream_key
+                }
             }
             if self.currentMediaPackage:
                 data['currentMediaPackage'] = self.currentMediaPackage
