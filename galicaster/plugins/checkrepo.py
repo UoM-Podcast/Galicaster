@@ -15,36 +15,163 @@
 """
 
 import datetime
+import os
 
 from galicaster.core import context
 from galicaster.mediapackage import mediapackage
+from galicaster.plugins import failovermic
 
 logger = context.get_logger()
+worker = context.get_worker()
+conf = context.get_conf()
+recorder = context.get_recorder()
+
+delay = conf.get_boolean('checkrepo', 'delay_merge') or False
+pause_state_file = os.path.join(context.get_repository().get_rectemp_path(), "paused")
+
 
 def init():	
-    dispatcher = context.get_dispatcher()
-    dispatcher.connect('ical-processed', check_repository)	
+    try:
+        if os.path.exists(pause_state_file):
+            os.remove(pause_state_file)
+        dispatcher = context.get_dispatcher()
+        dispatcher.connect('ical-processed', check_repository)
+        findrecs = FindRecordings()
+        dispatcher.connect('recorder-stopped', findrecs.find_recordings)
+        dispatcher.connect('timer-nightly', merge_delayed)
+
+    except ValueError:
+        pass
+
+class FindRecordings(object):
+
+    def __init__(self):
+        self.rectemp_exists = False
+
+    def find_recordings(self, signal, mpUri, mp):
+        dest = os.path.join(mpUri, "CHECK_REPO")
+        repofile = os.path.join(mpUri, "FILE_LIST")
+        if os.path.isfile(dest):
+            mp_list = context.get_repository()
+            rectemp = mp_list.get_rectemp_path()
+            timesfile = open(dest, "r")
+            timespan = timesfile.readline()
+            times = timespan.split(',')
+            start = datetime.datetime.strptime(times[0], "%Y-%m-%d %H:%M:%S")
+            end = datetime.datetime.strptime(times[1], "%Y-%m-%d %H:%M:%S")
+            timesfile.close()
+            repocheck = open(repofile, "a")
+            for fname in os.listdir(rectemp):
+                filepath = os.path.join(rectemp, fname)
+                if os.path.isdir(filepath):
+                    for item in (os.listdir(filepath)):
+                        fileitem = os.path.join(filepath, item)
+                        timestamp = os.path.getmtime(fileitem)
+                        time = datetime.datetime.utcfromtimestamp(timestamp)
+                        if start < time and end > time:
+                            self.rectemp_exists = True
+                            repocheck.write(filepath+"\n")
+                            break
+                if os.path.isfile(filepath):
+                    filesize=os.path.getsize(filepath)
+                    logger.info("found file: %s - size: %s", filepath, str(filesize))
+                    if filesize:
+                        logger.info("removing file: %s - size: %s", filepath, str(filesize))
+                        os.remove(filepath)
+            repocheck.close()
+            if self.rectemp_exists:
+                if delay:
+                    # stop ingest for now, set to delayed
+                    logger.info('delaying merge of mp parts and ingest')
+                    mp.setOpStatus('ingest', mediapackage.OP_DELAYED)
+                    mp_list.update(mp)
+                else:
+                    merge(mpUri, repofile, dest, mp_list)
+
+
+
+def merge(mpUri, repofile, dest, mp_list):
+    # while merging, create a paused file to stop check_galicaster scripts killing galicaster
+    wait = False
+    if os.path.exists(pause_state_file):
+        os.utime(pause_state_file, None)
+    else:
+        wait = True
+        open(pause_state_file, 'a').close()
+    os.system(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "contrib/scripts/concat_mp ")) + mpUri + " " + repofile)
+    duration = -1
+    durpath = os.path.join(mpUri, "DURATION.txt")
+    if os.path.isfile(durpath):
+        durfile = open(durpath, "r")
+        duration = durfile.readline()
+        durfile.close()
+        os.remove(durpath)
+    os.remove(dest)
+    os.remove(repofile)
+    logger.info("merge packages: " + mpUri)
+    for uid,mp in mp_list.iteritems():
+        if mp.getURI() == mpUri:
+            if duration == -1:
+                duration = mp.getDuration()
+            for t in mp.getTracks():
+                mp.remove(t)
+            filename = 'presentation.mp4'
+            dest = os.path.join(mpUri, os.path.basename(filename))
+            etype = 'video/' + dest.split('.')[1].lower()
+            flavour = 'presentation/source'
+            mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration)  # FIXME MIMETYPE
+            mp.forceDuration(duration)
+            mp_list.update(mp)
+            logger.info("merging complete for UID:%s - URI: %s", uid, mpUri)
+    if wait:
+        os.remove(pause_state_file)
+
+
+def merge_delayed(self):
+    # merge and ingest the delayed mp's
+    if delay:
+        repo = context.get_repository()
+        for mp_id, mp in repo.iteritems():
+            if not (mp.status == mediapackage.SCHEDULED or mp.status == mediapackage.RECORDING):
+                mpUri = mp.getURI()
+                dest = os.path.join(mpUri, "CHECK_REPO")
+                repofile = os.path.join(mpUri, "FILE_LIST")
+                if os.path.exists(repofile):
+                    merge(mpUri, repofile, dest, repo)
+                    failovermic.do_async_check(mp, mpUri)
+                    logger.info('Starting Ingest of merge delayed mediapackage: %s', mp_id)
+                    worker.ingest(mp)
+
 
 def check_repository(self):
-    global logger
-    #mp_list is collection of mediapackages ID's
+    # mp_list is collection of mediapackages ID's
+    if recorder.is_recording:
+        return
     mp_list = context.get_repository()
 
     for uid,mp in mp_list.iteritems():
-        if mp.status == mediapackage.SCHEDULED and mp.getDate() < datetime.datetime.utcnow() and mp.getDate()+datetime.timedelta(seconds=(mp.getDuration()/1000)) > datetime.datetime.utcnow():
-            #duration update			
-	    x = datetime.datetime.utcnow() - mp.getDate()
-	    x = x.seconds-2			
-	    mp.setDuration(mp.getDuration() - x*1000)
-	    #start-datetime update
-	    mp.setDate(datetime.datetime.utcnow()+datetime.timedelta(seconds=2))
-	    #repository update
-	    mp_list.update(mp)
-            
-	    scheduler = context.get_scheduler()
-	    try:
-                scheduler.create_timer(mp)
-                logger.info("Mediapackage with UID:%s have been reprogrammed", uid)
-	    except Exception as exc:
-                logger.error("Error trying to create a new timer for MP {}: {}".format(uid, exc))
-        
+        start = mp.getDate()
+        end = start + datetime.timedelta(seconds=(mp.getDuration()/1000))
+        if mp.status == mediapackage.SCHEDULED and start < datetime.datetime.utcnow() and end > datetime.datetime.utcnow():
+            dest = os.path.join(mp.getURI(),"CHECK_REPO")
+            if not os.path.isfile(dest):
+                repocheck = open(dest, "w")
+                repocheck.write(str(start) + "," + str(end) + ",\n")
+                repocheck.close()
+            # duration update
+            x = datetime.datetime.utcnow() - start
+            x = x.seconds-2            
+            mp.setDuration(mp.getDuration() - x*1000)
+            # start-datetime update
+            mp.setDate(datetime.datetime.utcnow()+datetime.timedelta(seconds=2))
+            # repository update
+            mp_list.update(mp)
+
+            scheduler = context.get_scheduler()
+            try:
+                        scheduler.create_new_timer(mp)
+            except ValueError:
+                        # log or set default value
+                        pass
+            # logging
+            logger.info("Mediapackage with UID:%s have been reprogrammed", uid)
