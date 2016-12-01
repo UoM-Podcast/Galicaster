@@ -41,7 +41,7 @@ for f in *_presentation.avi; do
       audio_track="-strict experimental"
   fi
 
-  ffmpeg -strict unofficial -i ${n}_presentation.avi ${audio_track} -sameq -shortest -vcodec copy ${n}_segment.mp4
+  ffmpeg -strict unofficial -i ${n}_presentation.avi ${audio_track} -qscale 0 -shortest -vcodec copy ${n}_segment.mp4
   n=$((n + 1)) 
 done;
 
