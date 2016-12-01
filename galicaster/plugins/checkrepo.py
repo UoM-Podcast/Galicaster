@@ -20,6 +20,7 @@ import os
 from galicaster.core import context
 from galicaster.mediapackage import mediapackage
 from galicaster.plugins import failovermic
+from galicaster.utils.mediainfo import get_duration
 
 logger = context.get_logger()
 worker = context.get_worker()
@@ -48,7 +49,11 @@ class FindRecordings(object):
     def __init__(self):
         self.rectemp_exists = False
 
-    def find_recordings(self, signal, mpUri, mp):
+    def find_recordings(self, signal, mpid):
+        mp = recorder.current_mediapackage
+        for t in mp.getTracks():
+            print get_duration(t.getURI())*1000
+        mpUri = mp.getURI()
         dest = os.path.join(mpUri, "CHECK_REPO")
         repofile = os.path.join(mpUri, "FILE_LIST")
         if os.path.isfile(dest):
@@ -87,6 +92,8 @@ class FindRecordings(object):
                     mp_list.update(mp)
                 else:
                     merge(mpUri, repofile, dest, mp_list)
+                    for t in mp.getTracks():
+                        print get_duration(t.getURI()) * 1000
 
 
 
@@ -145,7 +152,7 @@ def merge_delayed(self):
 
 def check_repository(self):
     # mp_list is collection of mediapackages ID's
-    if recorder.is_recording:
+    if recorder.is_recording():
         return
     mp_list = context.get_repository()
 
@@ -160,7 +167,7 @@ def check_repository(self):
                 repocheck.close()
             # duration update
             x = datetime.datetime.utcnow() - start
-            x = x.seconds-2            
+            x = x.seconds-2
             mp.setDuration(mp.getDuration() - x*1000)
             # start-datetime update
             mp.setDate(datetime.datetime.utcnow()+datetime.timedelta(seconds=2))
@@ -169,7 +176,7 @@ def check_repository(self):
 
             scheduler = context.get_scheduler()
             try:
-                        scheduler.create_new_timer(mp)
+                        scheduler.create_timer(mp)
             except ValueError:
                         # log or set default value
                         pass
