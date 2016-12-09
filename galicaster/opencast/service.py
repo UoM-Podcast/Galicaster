@@ -240,7 +240,7 @@ class OCService(object):
         self.dispatcher.emit('ical-processed')
 
     def process_ical_cached(self):
-        self.logger.info('Proccess ical cached')
+        self.logger.info('Process ical from cache')
         cached_events = self.last_events
         if not cached_events:
             return

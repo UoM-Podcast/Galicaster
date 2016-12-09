@@ -19,20 +19,14 @@ from datetime import datetime
 from icalendar import Calendar
 from galicaster.mediapackage import mediapackage
 
-count = 0
 
 def get_events_from_string_ical(ical_data, limit=0):
-    global count
     # See https://github.com/collective/icalendar#api-change
     f = getattr(Calendar, 'from_ical', getattr(Calendar, 'from_string', None))
     cal = f(ical_data)
     if limit > 0:
-        events = cal.walk('vevent')[count:limit+count]
-        for event in events:
-            if event['DTSTART'].dt.replace(tzinfo=None) < datetime.utcnow():
-                count += 1
-        if count > 0:
-            events = cal.walk('vevent')[count:limit+count]
+        events = cal.walk('vevent')[0:limit]
+        print events
     else:
         events = cal.walk('vevent')
     return events
