@@ -11,8 +11,8 @@ worker = context.get_worker()
 conf = context.get_conf()
 
 CA_NAME = conf.get('ingest', 'hostname')
-MOUNT_POINT = '/mnt/backup'
-NAS_PATH = '/mnt/backup/media/'
+MOUNT_POINT = conf.get('backuprepo', 'mount_point')
+NAS_PATH = conf.get('backuprepo', 'nas_path')
 
 
 def init():
@@ -50,7 +50,7 @@ def backuprepo(sender=None):
         return
     for mps in backup_uris:
         try:
-            os.system('rsync -zavr -e ssh --update --ignore-existing ' + mps + ' ' + NAS_PATH + CA_NAME + '/')
+            os.system('rsync -zavr --update ' + mps + ' ' + NAS_PATH + CA_NAME + '/')
         except Exception:
             pass
             logger.debug('failed to backup {0} to shared area'.format(mps))
