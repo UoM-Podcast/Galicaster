@@ -37,20 +37,12 @@ def backuprepo(sender=None):
         os.system('mount {}'.format(MOUNT_POINT))
     except Exception:
         logger.debug('could not mount share')
-    if os.path.exists(NAS_PATH):
-        if not os.path.exists(NAS_PATH + CA_NAME):
-            try:
-                os.makedirs(NAS_PATH + CA_NAME)
-            except Exception:
-                logger.debug('failed to make backup dir for capture agent')
-                return
-    else:
-        return
+
     if not backup_uris:
         return
     for mps in backup_uris:
         try:
-            os.system('rsync -zavr --update ' + mps + ' ' + NAS_PATH + CA_NAME + '/')
+            os.system('rsync -zavr --update ' + mps + ' ' + MOUNT_POINT + NAS_PATH)
         except Exception:
             pass
             logger.debug('failed to backup {0} to shared area'.format(mps))
