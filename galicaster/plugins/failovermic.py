@@ -36,6 +36,9 @@ default_track = '1'
 rms_list = []
 temp_amp = None
 
+device = None
+MAX_AMPLITUDE = None
+audio_track = None
 
 def init():
     try:

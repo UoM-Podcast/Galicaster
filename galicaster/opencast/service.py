@@ -6,18 +6,19 @@
 # Copyright (c) 2011, Teltek Video Research <galicaster@teltek.es>
 #
 # This work is licensed under the Creative Commons Attribution-
-# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of 
-# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ 
-# or send a letter to Creative Commons, 171 Second Street, Suite 300, 
+# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of
+# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/
+# or send a letter to Creative Commons, 171 Second Street, Suite 300,
 # San Francisco, California, 94105, USA.
 
 import datetime
 from os import path
-from threading import Timer
 
 from galicaster.utils import ical
-from galicaster.mediapackage import mediapackage
 from galicaster.opencast.series import get_series
+
+from galicaster.utils.queuethread import T
+import Queue
 
 """
 This class manages the timers and its respective signals in order to start and stop scheduled recordings.
@@ -41,14 +42,12 @@ class OCService(object):
         Attributes:
             ca_status (str): actual capture agent status.
             old_ca_status (str): old capture agent status.
-            conf (Conf): galicaster users and default configuration given as an argument. 
+            conf (Conf): galicaster users and default configuration given as an argument.
             repo (Repository): the galicaster mediapackage repository given as an argument.
             dispatcher (Dispatcher): the galicaster event-dispatcher to emit signals given by the argument disp.
-            client (MHTTPClient): opencast HTTP client given by the argument occlient. 
+            client (MHTTPClient): opencast HTTP client given by the argument occlient.
             logger (Logger): the object that prints all the information, warning and error messages.
             recorder (Recorder)
-            t_stop (Timer): timer with the duration of a scheduled recording. 
-            start_timers (Dict{str,Timer}): set of timers with the time remaining for all the scheduled recordings that are going to start in less than 30 minutes.
             mp_rec (str): identifier of the mediapackage that is going to be recorded at the scheduled time.
             last_events (List[Events]): list of calendar Events.
             net (bool): True if the connectivity with opencast is up. False otherwise.
@@ -73,15 +72,20 @@ class OCService(object):
         self.dispatcher.connect('recorder-started', self.__check_recording_started)
         self.dispatcher.connect('recorder-stopped', self.__check_recording_stopped)
         self.dispatcher.connect("recorder-error", self.on_recorder_error)
-        
+
         self.t_stop = None
 
-        self.start_timers = dict()
         self.mp_rec = None
         self.last_events = self.init_last_events()
         self.net = False
         self.series = []
 
+        self.ical_data = None
+
+        self.jobs = Queue.Queue()
+        t = T(self.jobs)
+        t.setDaemon(True)
+        t.start()
 
     def __set_recording_state(self, mp, state):
         self.logger.info("Sending state {} for the scheduled MP {}".format(state, mp))
@@ -89,16 +93,15 @@ class OCService(object):
             self.client.setrecordingstate(mp.getIdentifier(), state)
         except Exception as exc:
             self.logger.warning('Problems to connect to opencast server: {0}'.format(exc))
-            self.dispatcher.emit('opencast-status', False)
-            self.net = False
+            self.__set_opencast_down()
 
-                
+
     def __check_recording_started(self, element=None, mp_id=None):
         #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
         if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
-            self.__set_recording_state(mp, 'capturing')
-            
+            self.jobs.put((self.__set_recording_state, (mp, 'capturing')))
+
 
     def __check_recording_stopped(self, element=None, mp_id=None):
         #TODO: Improve the way of checking if it is a scheduled recording
@@ -106,15 +109,32 @@ class OCService(object):
         if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
             self.__set_recording_state(mp, 'capture_finished')
 
-        
+
+    def __set_opencast_up(self, force=False):
+        if not self.net or force:
+            self.net = True
+            self.dispatcher.emit('opencast-status', True)
+            self.jobs.queue.clear()
+
+
+    def __set_opencast_down(self, force=False):
+        if self.net or force:
+            self.net = False
+            self.dispatcher.emit('opencast-status', False)
+            self.jobs.queue.clear()
+
+    def __set_opencast_connecting(self):
+        self.dispatcher.emit('opencast-status', None)
+        self.net = None
+
     def init_last_events(self):
         """Initializes the last_events parameter with the events represented in calendar.ical (attach directory).
         Returns:
-            List[Events]: list of calendar events. 
+            List[Events]: list of calendar events.
         """
         ical_path = self.repo.get_attach_path('calendar.ical')
         if path.isfile(ical_path):
-            return ical.get_events_from_file_ical(ical_path)
+            return ical.get_events_from_file_ical(ical_path, limit=100)
         else:
             return list()
 
@@ -128,44 +148,44 @@ class OCService(object):
             This method is invoked every short beat duration. (10 seconds by default)
         """
         if self.net:
-            self.set_state()
+            self.jobs.put((self.set_state, ()))
         else:
-            self.init_client()
+            self.jobs.put((self.init_client, ()))
 
 
     def do_timers_long(self, sender):
-        """Calls proccess_ical method in order to process the icalendar received from opencast if connectivity is up.
-        Then, calls create_new_timer method with the mediapackages that have scheduled recordings in order to create a new timer if necessary.
+        """Calls process_ical method in order to process the icalendar received from opencast if connectivity is up.
         Args:
             sender (Dispatcher): instance of the class in charge of emitting signals.
         Notes:
             This method is invoked every long beat duration (1 minute by default).
         """
         if self.net:
-            self.proccess_ical()
-            self.dispatcher.emit('ical-processed')
-            self.series = get_series()
-        for mp in self.repo.get_next_mediapackages():
-            self.scheduler.create_new_timer(mp)
+            self.jobs.put((self.process_ical,()))
+            self.jobs.put((self.update_series,()))
+
+            
+    def update_series(self):
+        self.logger.debug('Updating series from server')
+        self.series = get_series()
+
         
-    
     def init_client(self):
         """Tries to initialize opencast's client and set net's state.
         If it's unable to connecto to opencast server, logger prints ir properly and net is set True.
         """
         self.logger.info('Init opencast client')
         self.old_ca_status = None
-        self.dispatcher.emit('opencast-status', None)
+        self.__set_opencast_connecting()
         try:
             self.client.welcome()
+            self.__set_opencast_up()
+            self.jobs.put((self.update_series,()))
+            if self.conf.tracks_visible_to_opencast():
+                self.logger.info('Be careful using profiles and opencast scheduler')
         except Exception as exc:
             self.logger.warning('Unable to connect to opencast server: {0}'.format(exc))
-            self.net = False
-            self.dispatcher.emit('opencast-status', False)
-        else:
-            self.net = True
-            # self.dispatcher.emit('opencast-connected')
-
+            self.__set_opencast_down(True)
 
 
     def set_state(self):
@@ -180,78 +200,48 @@ class OCService(object):
             self.ca_status = 'capturing'
         else:
             self.ca_status = 'idle'
-        self.logger.info('Set status %s to server', self.ca_status)        
-        
+        self.logger.info('Set status %s to server', self.ca_status)
+
         try:
             self.client.setstate(self.ca_status)
             self.client.setconfiguration(self.conf.get_tracks_in_oc_dict())
-            self.net = True
-            self.dispatcher.emit('opencast-status', True)
+            self.__set_opencast_up()
         except Exception as exc:
             self.logger.warning('Problems to connect to opencast server: {0}'.format(exc))
-            self.net = False
-            self.dispatcher.emit('opencast-status', False)
+            self.__set_opencast_down()
             return
 
 
-    def proccess_ical(self):
+    def process_ical(self):
         """Creates, deletes or updates mediapackages according to scheduled events information given by opencast.
         """
-        self.logger.info('Proccess ical')
+        self.logger.info('Process ical')
         try:
-            ical_data = self.client.ical()
+            ical_data1 = self.client.ical()
         except Exception as exc:
             self.logger.warning('Problems to connect to opencast server: {0}'.format(exc))
-            self.net = False
-            self.dispatcher.emit('opencast-status', False)
+            self.__set_opencast_down()
             return
 
         # No data but no error implies that the calendar has not been modified (ETAG)
-        if ical_data == None:
-            return
-        
-        try:
-            events = ical.get_events_from_string_ical(ical_data)
-            delete_events = ical.get_delete_events(self.last_events, events)
-            update_events = ical.get_update_events(self.last_events, events)
-        except Exception as exc:
-            self.logger.error('Error proccessing ical: {0}'.format(exc))
-            return
+        if ical_data1:
+            self.ical_data = ical_data1
+            self.repo.save_attach('calendar.ical', self.ical_data)
+            ical.count = 0
 
-        self.repo.save_attach('calendar.ical', ical_data)
-        
-        for event in events:
-            self.logger.debug('Creating MP with UID {0} from ical'.format(event['UID']))
-            ical.create_mp(self.repo, event)
-        
-        for event in delete_events:
-            self.logger.info('Deleting MP with UID {0} from ical'.format(event['UID']))
-            mp = self.repo.get(event['UID'])
-            if mp.status == mediapackage.SCHEDULED:
-                self.repo.delete(mp)
-            if self.start_timers.has_key(mp.getIdentifier()):
-                self.start_timers[mp.getIdentifier()].cancel()
-                del self.start_timers[mp.getIdentifier()]
+        self.last_events = ical.handle_ical(self.ical_data, self.last_events, self.repo,
+                                             self.scheduler, self.logger)
 
-        for event in update_events:
-            self.logger.info('Updating MP with UID {0} from ical'.format(event['UID']))
-            mp = self.repo.get(event['UID'])
-            if self.start_timers.has_key(mp.getIdentifier()) and mp.status == mediapackage.SCHEDULED:
-                self.start_timers[mp.getIdentifier()].cancel()
-                del self.start_timers[mp.getIdentifier()]
-                self.scheduler.create_new_timer(mp)
-                
-        self.last_events = events
+        self.dispatcher.emit('ical-processed')
 
 
-        
     def on_recorder_error(self, origin=None, error_message=None):
         current_mp_id = self.recorder.current_mediapackage
         if not current_mp_id:
             return
-        
+
         mp = self.repo.get(current_mp_id)
-        
+
         if mp and not mp.manual:
             now_is_recording_time = mp.getDate() < datetime.datetime.utcnow() and mp.getDate() + datetime.timedelta(seconds=(mp.getDuration()/1000)) > datetime.datetime.utcnow()
 

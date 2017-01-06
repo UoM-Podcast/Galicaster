@@ -16,6 +16,7 @@ UI for a Metadata Editor Pop UP
 
 from gi.repository import Gtk, Gdk
 from gi.repository import GObject
+from gi.repository import Pango
 
 import datetime
 import os
@@ -73,7 +74,7 @@ class MetadataClass(Gtk.Widget):
         self.series_list = []
         if ocservice:
             self.series_list = context.get_ocservice().series
-            
+
         self.empty_series_label = empty_series_label
 
         gui = Gtk.Builder()
@@ -99,7 +100,15 @@ class MetadataClass(Gtk.Widget):
         dialog.vbox.reorder_child(strip,0)
 
         if parent != None:
-            #dialog.set_transient_for(parent.get_toplevel())
+            # FIXME: The keyboard plugin uses Ubuntu Onboard.
+            # https://bugs.launchpad.net/onboard/+bug/1627819
+            # There is a bug with this plugin where the "dock to edges"
+            # option does not work with the "force to top" one, causing
+            # Onboard to appear behind when Galicaster is on fullscreen.
+            # THIS affects #321. A better solution should be implemented.
+            from galicaster import plugins
+            if not parent.is_fullscreen or 'galicaster.plugins.keyboard' not in plugins.loaded:
+                dialog.set_transient_for(parent.get_toplevel())
             dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
             dialog_style_context = dialog.get_style_context()
             window_classes = parent.get_style_context().list_classes()
@@ -173,11 +182,14 @@ class MetadataClass(Gtk.Widget):
             if meta in ["ispartof", "isPartOf"]:
                 try:
                     default_series = utils_series.filterSeriesbyId(self.series_list, mp.metadata_series['identifier'])['id']
-                except Exception as exc:
+                except Exception:
                     default_series = None
 
                 d = ComboBoxEntryExt(self.par, self.series_list, default=default_series, empty_label = self.empty_series_label)
                 d.set_name(meta)
+                cell = d.get_cells()[0]
+                cell.props.ellipsize = Pango.EllipsizeMode.END
+                cell.props.max_width_chars = 2
             else:
                 d=Gtk.Entry()
                 d.set_name(meta)
@@ -249,7 +261,10 @@ class MetadataClass(Gtk.Widget):
                         mp.metadata_episode[name] = child.get_text().strip()
 
                 elif name in [ "ispartof", "isPartOf" ]:
-                    identifier = child.get_model()[child.get_active_iter()][1]
+                    if child.get_active_iter():
+                        identifier = child.get_model()[child.get_active_iter()][1]
+                    else:
+                        identifier = None
                     series = utils_series.filterSeriesbyId(self.series_list, identifier)
                     if series:
                         mp.setSeries(series["list"])

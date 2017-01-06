@@ -37,20 +37,32 @@ NEXT_REC = 'next.glade'
 QUESTION = Gtk.STOCK_DIALOG_QUESTION
 
 #ACTION = Gtk.STOCK_DIALOG_QUESTION
-POSITIVE = [Gtk.ResponseType.ACCEPT, Gtk.ResponseType.OK, Gtk.ResponseType.YES, Gtk.ResponseType.APPLY]
-NEGATIVE = [Gtk.ResponseType.REJECT, Gtk.ResponseType.DELETE_EVENT, Gtk.ResponseType.CANCEL, Gtk.ResponseType.CLOSE, Gtk.ResponseType.NO]
+POSITIVE = [
+    Gtk.ResponseType.ACCEPT,
+    Gtk.ResponseType.OK,
+    Gtk.ResponseType.YES,
+    Gtk.ResponseType.APPLY
+]
+NEGATIVE = [
+    Gtk.ResponseType.REJECT,
+    Gtk.ResponseType.DELETE_EVENT,
+    Gtk.ResponseType.CANCEL,
+    Gtk.ResponseType.CLOSE,
+    Gtk.ResponseType.NO
+]
 
-OPERATION_NAMES = { 'Export to Zip': _('Export to Zip'),
-            'Export to Zip Nightly': _('Export to Zip Nightly'),
-            'Cancel Export to Zip Nightly': _('Cancel Zip Nightly'),
-            'Ingest': _('Ingest'),
-            'Ingest Nightly': _('Ingest Nightly'),
-            'Cancel Ingest Nightly': _('Cancel Ingest Nightly'),
-            'Side by Side': _('Side by Side'),
-            'Side by Side Nightly': _('Side by Side Nightly'),
-            'Cancel Side by Side Nightly': _('Cancel SbS Nightly'),
-            'Cancel': _('Cancel'),
-             }
+OPERATION_NAMES = {
+    'Export to Zip': _('Export to Zip'),
+    'Export to Zip Nightly': _('Export to Zip Nightly'),
+    'Cancel Export to Zip Nightly': _('Cancel Zip Nightly'),
+    'Ingest': _('Ingest'),
+    'Ingest Nightly': _('Ingest Nightly'),
+    'Cancel Ingest Nightly': _('Cancel Ingest Nightly'),
+    'Side by Side': _('Side by Side'),
+    'Side by Side Nightly': _('Side by Side Nightly'),
+    'Cancel Side by Side Nightly': _('Cancel SbS Nightly'),
+    'Cancel': _('Cancel'),
+}
 
 instance = None
 
@@ -59,12 +71,13 @@ class PopUp(Gtk.Widget):
     __gtype_name__ = 'PopUp'
 
     def __init__(self, message=None, text=TEXT, parent=None,
-                 buttons=None, response_action=None, close_on_response=True):
+                 buttons=None, response_action=None, close_on_response=True,
+                 show=[], close_parent = False):
         """ Initializes the Gtk.Dialog from its GLADE
         Args:
             message (str): type of message (See above constants)
-            text (Dict{str:str}): dictionary with the labels of the text that are going to be ser.
-            parent (Gtk.Window): program main window
+            text (Dict{str:str}): Labels of the texts that are going to be set.
+            parent (Gtk.Window): main window
             buttons (Dict{str:str}): button labels to be shown and its responses
 
         Notes: title key is asociated with the label of the GALICASTER strip.
@@ -82,6 +95,7 @@ class PopUp(Gtk.Widget):
         self.response_action = response_action
         self.close_on_response = close_on_response
         self.message = message
+        self.close_parent = close_parent
         self.size = size
         self.wprop = size[0]/1920.0
         self.hprop = size[1]/1080.0
@@ -98,7 +112,7 @@ class PopUp(Gtk.Widget):
 
             frames = {'Cancel': {'Cancel' : -2}}
 
-            for operation,response in buttons.iteritems():
+            for operation, response in buttons.iteritems():
                 if operation.count('Ingest'):
                     if not frames.has_key('Ingest'):
                         frames['Ingest'] = {}
@@ -131,9 +145,16 @@ class PopUp(Gtk.Widget):
                 if no_recs:
                     no_recs.show()
 
+        elif message == LOCKSCREEN:
+            for element in show:
+                gtk_obj = self.gui.get_object(element)
+                if gtk_obj:
+                    gtk_obj.show()
+            self.gui.get_object("quitbutton").connect("clicked", context.get_mainwindow().do_quit)
 
         # Display dialog
         parent.get_style_context().add_class('shaded')
+        self.dialog.set_transient_for(parent)
         if message in [ERROR, WARN_QUIT, WARN_STOP, ABOUT, INFO, WARN_DELETE, LOCKSCREEN, MP_INFO]:
             self.dialog.show()
             self.dialog.connect('response', self.on_dialog_response)
@@ -169,7 +190,7 @@ class PopUp(Gtk.Widget):
         # For MP Info PopUP
         series_shown = False
 
-        for label,content in text.iteritems():
+        for label, content in text.iteritems():
 
             if label == 'title':
                 title = content
@@ -178,13 +199,13 @@ class PopUp(Gtk.Widget):
                 if message_type != INFO:
                     main = gui.get_object("main")
                     if main:
-                        main.set_label(text.get('main',''))
+                        main.set_label(text.get('main', ''))
                 else:
-                    help_message = "{}\n{}".format(text.get('main',''),text.get('text',''))
+                    help_message = "{}\n{}".format(text.get('main', ''), text.get('text', ''))
                     textbuffer = gui.get_object('textbuffer')
                     textbuffer.set_text(help_message)
 
-            elif isinstance(label,str) and content:
+            elif isinstance(label, str) and content:
                 text_label = gui.get_object(label)
                 if text_label:
                     text_label.set_label(content)
@@ -206,14 +227,14 @@ class PopUp(Gtk.Widget):
         #HEADER
         strip = Header(size=self.size, title=title)
         dialog.vbox.pack_start(strip, True, True, 0)
-        dialog.vbox.reorder_child(strip,0)
+        dialog.vbox.reorder_child(strip, 0)
 
-        dialog.set_property('width-request',int(self.size[0]/2.5))
+        dialog.set_property('width-request', int(self.size[0]/2.5))
         # relative to screen size
         if self.size[0]<1300:
-            dialog.set_property('width-request',int(self.size[0]/2.2))
+            dialog.set_property('width-request', int(self.size[0]/2.2))
         if another:
-            dialog.set_property('width-request',int(self.size[0]/1.5))
+            dialog.set_property('width-request', int(self.size[0]/1.5))
 
         if parent != None:
             dialog_style_context = dialog.get_style_context()
@@ -241,46 +262,46 @@ class PopUp(Gtk.Widget):
         # Problem getting the width and height of the grid, non readable porperty
         export_frame_pos = {
             0 : { # column number
-                0 : None, # row number
-                1 : None,
+                0: None, # row number
+                1: None,
                 },
             1 : {
-                0 : None,
-                1 : None,
+                0: None,
+                1: None,
                 }
         }
 
-        for frame,operations in frames.iteritems():
+        for frame, operations in frames.iteritems():
             frame_widget = gui.get_object('{} frame'.format(frame))
             frame_widget.show()
-            for operation,response in operations.iteritems():
+            for operation, response in operations.iteritems():
                 button = gui.get_object("{} button".format(operation))
                 button.set_label(OPERATION_NAMES[operation])
-                button.connect("clicked",self.force_response,response)
+                button.connect("clicked", self.force_response, response)
                 # Fill the export_frame_pos dict in order to expand the buttons if
                 # necessary to achive a better look & feel
                 if frame == 'Export':
-                    row = grid.child_get_property(button,'left-attach')
-                    column = grid.child_get_property(button,'top-attach')
+                    row = grid.child_get_property(button, 'left-attach')
+                    column = grid.child_get_property(button, 'top-attach')
                     export_frame_pos[column][row] = button
                 button.show()
 
         # Expand the buttons if the widgets of the same column in different rows are hidden
-        for row,widget in export_frame_pos[0].iteritems():
+        for row, widget in export_frame_pos[0].iteritems():
             if not widget:
                 if export_frame_pos[1][row]:
-                    grid.child_set_property(export_frame_pos[1][row],'top-attach',0)
-                    grid.child_set_property(export_frame_pos[1][row],'height',len(export_frame_pos))
+                    grid.child_set_property(export_frame_pos[1][row], 'top-attach', 0)
+                    grid.child_set_property(export_frame_pos[1][row], 'height', len(export_frame_pos))
             else:
                 if not export_frame_pos[1][row]:
-                    grid.child_set_property(export_frame_pos[0][row],'height',len(export_frame_pos))
+                    grid.child_set_property(export_frame_pos[0][row], 'height', len(export_frame_pos))
 
 
-    def set_logos(self,gui):
+    def set_logos(self, gui):
         """ Set the logos of the product and the company
         """
 
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(get_image_path('logo.svg'))    
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(get_image_path('logo.svg'))
         pixbuf = pixbuf.scale_simple(
             int(pixbuf.get_width()*self.wprop),
             int(pixbuf.get_height()*self.wprop),
@@ -288,14 +309,14 @@ class PopUp(Gtk.Widget):
         self.dialog.set_logo(pixbuf)
 
         teltek_logo = gui.get_object("teltek")
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(get_image_path('teltek.svg'))    
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(get_image_path('teltek.svg'))
         pixbuf = pixbuf.scale_simple(
             int(pixbuf.get_width()*self.wprop),
             int(pixbuf.get_height()*self.wprop),
             GdkPixbuf.InterpType.BILINEAR)
         teltek_logo.set_from_pixbuf(pixbuf)
 
-    def fill_info(self,grid,info):
+    def fill_info(self, grid, info):
         """ Fill the Information PopUp with the tracks information
         Args:
             grid (Gtk.Grid): the grid element of 2 columns to be filled.
@@ -305,10 +326,10 @@ class PopUp(Gtk.Widget):
         for e in info:
             void_label = Gtk.Label('')
             void_label.show()
-            grid.attach(void_label,0,row,1,1)
+            grid.attach(void_label, 0, row, 1, 1)
             void_label = Gtk.Label('')
             void_label.show()
-            grid.attach(void_label,1,row,1,1)
+            grid.attach(void_label, 1, row, 1, 1)
             row += 1
             for info_label, info_content in e.iteritems():
                 label = Gtk.Label.new(info_label.title())
@@ -317,8 +338,8 @@ class PopUp(Gtk.Widget):
                 content = Gtk.Label.new(info_content.title())
                 content.set_halign(Gtk.Align.START)
                 content.show()
-                grid.attach(label,0,row,1,1)
-                grid.attach(content,1,row,1,1)
+                grid.attach(label, 0, row, 1, 1)
+                grid.attach(content, 1, row, 1, 1)
                 row += 1
         grid.show()
 
@@ -336,21 +357,24 @@ class PopUp(Gtk.Widget):
                 if widget:
                     if isinstance(widget, Gtk.Label):
                         new_widget = Gtk.Label().new(content)
-                        new_widget.show()
                     else:
                         new_widget = Gtk.Button().new_with_label(_("Record Now"))
-                        # Use set_properties?
+                        # FIXME: Use set_properties?
                         new_widget.set_property('halign', widget.get_property('halign'))
                         new_widget.set_property('valign', widget.get_property('valign'))
-                        new_widget.show()
-                        new_widget.connect("button-press-event",self.send_start, content)
+                        new_widget.connect("clicked", self.send_start, content)
+                    widget_classes = widget.get_style_context().list_classes()
+                    for style_class in widget_classes:
+                        widget_style_context = new_widget.get_style_context()
+                        widget_style_context.add_class(style_class)
+                    new_widget.show()
 
-                grid.attach(new_widget,column,row,1,1)
+                grid.attach(new_widget, column, row, 1, 1)
                 column += 1
             row += 1
 
     # FIXME: so specific, give it as a callback?
-    def send_start(self,origin, event, data):
+    def send_start(self, origin, data):
         mp = context.get_repository().get(data)
         mp.anticipated = True
         context.get_recorder().record(mp)
@@ -368,7 +392,7 @@ class PopUp(Gtk.Widget):
                 if type(element) == Gtk.Label:
                     #element.set_attributes(font2)
                     if equal:
-                        element.set_padding(-1,int(wprop*fsize/2.6))
+                        element.set_padding(-1, int(wprop*fsize/2.6))
                         element.set_width_chars(chars)
                 else:# is a box
                     for box in element.get_children():
@@ -386,7 +410,7 @@ class PopUp(Gtk.Widget):
                                     if type(other) == Gtk.Label:
                                         #other.set_attributes(font2)
                                         if equal:
-                                            other.set_padding(-1,int(wprop*fsize/2.6))
+                                            other.set_padding(-1, int(wprop*fsize/2.6))
                                             other.set_width_chars(chars)
 
 
@@ -399,13 +423,16 @@ class PopUp(Gtk.Widget):
             context.get_mainwindow().get_style_context().remove_class('shaded')
             self.dialog_destroy()
 
-    def on_dialog_response(self, origin, response_id):        
-        if response_id not in NEGATIVE and self.response_action:            
+    def on_dialog_response(self, origin, response_id):
+        if response_id not in NEGATIVE and self.response_action:
             self.response_action(response_id, builder=self.gui, popup=self)
             if self.close_on_response:
                 self.dialog_destroy()
         else:
             self.dialog_destroy()
+            if self.close_parent:
+                GObject.idle_add(context.get_mainwindow().do_quit)
+
 
     def dialog_destroy(self, origin=None):
         global instance
@@ -427,4 +454,3 @@ def main(args):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-
