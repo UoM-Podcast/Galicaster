@@ -48,7 +48,7 @@ INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 class OCHTTPClient(object):
     
     def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False, 
-                 random_ingest=False, stop_admin_ingest=True, connect_timeout=2, timeout=2, workflow='full', workflow_parameters={'trimHold':'true'},
+                 random_ingest=False, stop_admin_ingest=False, connect_timeout=2, timeout=2, workflow='full', workflow_parameters={'trimHold':'true'},
                  ca_parameters={}, polling_short=10, polling_long=60, repo=None, logger=None):
         """
         Arguments:
