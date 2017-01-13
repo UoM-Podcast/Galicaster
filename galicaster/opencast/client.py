@@ -37,7 +37,9 @@ SERIES_ENDPOINT = '/series/series.json'
 SERVICE_REGISTRY_ENDPOINT = '/services/available.json'
 SEARCH_ENDPOINT = '/search/episode.json'
 WORKFLOWS_ENDPOINT = '/workflow/definitions.json'
+WORKFLOW_ENDPOINT = '/workflow/instance/{id}.json'
 
+WORKFLOW_SERVICE_TYPE = 'org.opencastproject.workflow'
 SEARCH_SERVICE_TYPE = 'org.opencastproject.search'
 INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 
@@ -88,6 +90,7 @@ class OCHTTPClient(object):
         self.workflow_names = []
         self.ca_parameters = ca_parameters
         self.search_server = None
+        self.workflow_server = None
         self.polling_schedule = polling_long
         self.polling_state = polling_short
         # FIXME should be long? https://github.com/teltek/Galicaster/issues/114
@@ -139,7 +142,7 @@ class OCHTTPClient(object):
             c.perform()
         except Exception as exc:
             raise RuntimeError, exc
-        
+
         status_code = c.getinfo(pycurl.HTTP_CODE)
         self.response['Status-Code'] = status_code
         self.response['Content-Type'] = c.getinfo(pycurl.CONTENT_TYPE)
@@ -274,6 +277,15 @@ class OCHTTPClient(object):
             self.search_server = str(service['host'])
         return self.search_server
 
+    def _get_workflow_server(self):
+        if not self.workflow_server:
+            service = self._get_endpoints(WORKFLOW_SERVICE_TYPE)
+            if not isinstance(service, dict):
+                self.workflow_server = str(service[0]['host'])
+            else:
+                self.workflow_server = str(service['host'])
+        return self.workflow_server
+
     def search_by_mp_id(self, mp_id):
         """ Returns search result from opencast """
         search_server = self._get_search_server()
@@ -281,6 +293,13 @@ class OCHTTPClient(object):
         search_result = json.loads(result)
         return search_result['search-results']
 
+    def search_by_mp_workflow_id(self, mp_id):
+        """ Returns result of workflow search for mediapackage workflow id """
+        workflow_server = self._get_workflow_server()
+        print mp_id
+        result = self.__call('GET', WORKFLOW_ENDPOINT, {'id': mp_id}, {}, {}, True, workflow_server, True)
+        search_result = json.loads(result)
+        return search_result
 
     def verify_ingest_server(self, server):
         """ if we have multiple ingest servers the get_ingest_server should never 
@@ -300,7 +319,7 @@ class OCHTTPClient(object):
             return False
         
         try:
-            adminIP = socket.gethostbyname(adminHost);
+            adminIP = socket.gethostbyname(adminHost)
             hostIP  = socket.gethostbyname(host)
             if (adminIP != hostIP):
                 return True
