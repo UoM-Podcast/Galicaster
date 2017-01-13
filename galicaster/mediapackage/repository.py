@@ -34,7 +34,7 @@ class Repository(object):
 
     def __init__(self, root=None, hostname='',
                  folder_template='gc_{hostname}_{year}-{month}-{day}T{hour}h{minute}m{second}',
-                 logger=None):
+                 logger=None, config=None):
         """Initializes a repository that will contain a set of mediapackage.
         Args:
             root (str): absolute path to the working folder. ~/Repository used if it is None
@@ -45,6 +45,7 @@ class Repository(object):
             __list (Dict{str,Mediapackage}): the mediapackages in the repository and its identifiers as keys
         """
         self.logger = logger
+        self.config = config
 
         if not root:
             self.root = os.path.expanduser('~/Repository')
@@ -95,10 +96,13 @@ class Repository(object):
         """If a manifest.xml file exists, calls the recover_recoding method.
         If else, calls the save_crash_recordings method.
         """
-        if os.path.exists(os.path.join(self.get_rectemp_path(), "manifest.xml")):
-            self.logger and self.logger.info("Found a recording that has crashed")
-            self.crash_file_creator()
-            self.recover_recording()
+        if self.config.get_choice('repository', 'recoverytype', ['full', 'save'] , 'full') == 'full':
+            if os.path.exists(os.path.join(self.get_rectemp_path(), "manifest.xml")):
+                self.logger and self.logger.info("Found a recording that has crashed")
+                self.crash_file_creator()
+                self.recover_recording()
+            else:
+                self.save_crash_recordings()
         else:
             self.save_crash_recordings()
 
