@@ -103,7 +103,9 @@ def get_occlient():
 
     if 'occlient' not in __galicaster_context:
         conf = get_conf()
-        multiple_ingest  = conf.get_boolean('ingest','multiple-ingest') or False
+        multiple_ingest = conf.get_boolean('ingest','multiple-ingest') or False
+        random_ingest = conf.get_boolean('ingest', 'random-ingest') or False
+        stop_admin_ingest = conf.get_boolean('ingest', 'stop-admin-ingest') or False
         connect_timeout = conf.get_int('ingest', 'connect_timeout') or 2
         timeout = conf.get_int('ingest', 'timeout') or 2
         if get_conf().get_boolean("ingest", "active"):
@@ -113,6 +115,8 @@ def get_occlient():
                                     conf.get_hostname(),
                                     conf.get('ingest', 'address'),
                                     multiple_ingest,
+                                    random_ingest,
+                                    stop_admin_ingest,
                                     connect_timeout,
                                     timeout,
                                     conf.get('ingest', 'workflow'),
