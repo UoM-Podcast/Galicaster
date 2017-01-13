@@ -7,9 +7,9 @@
 # Copyright (c) 2011, Teltek Video Research <galicaster@teltek.es>
 #
 # This work is licensed under the Creative Commons Attribution-
-# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of 
-# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ 
-# or send a letter to Creative Commons, 171 Second Street, Suite 300, 
+# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of
+# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/
+# or send a letter to Creative Commons, 171 Second Street, Suite 300,
 # San Francisco, California, 94105, USA.
 
 import sys
@@ -21,10 +21,12 @@ gi.require_version('Gst', '1.0')
 gi.require_version('GstPbutils', '1.0')
 gi.require_version('Gtk', '3.0')
 
-from gi.repository import Gtk
-from gi.repository import Gst
+from gi.repository import Gtk     # noqa: ignore=E402
+from gi.repository import GLib    # noqa: ignore=E402
+from gi.repository import Gst     # noqa: ignore=E402
 
-from galicaster.core import core
+from galicaster.core import core  # noqa: ignore=E402
+
 
 def main(args):
     def usage():
@@ -36,16 +38,27 @@ def main(args):
     try:
         Gst.init(None)
         gc = core.Main()
+        # Bug with Gtk.main() not raising a KeyboardInterrupt(SIGINT) exception
+        # https://bugzilla.gnome.org/show_bug.cgi?id=622084
+        # Calling GObject.MainLoop.run() instead could be an option.
+        # Sadly, Gtk.main_quit() does not work with it.
+        # This workaround will stay until a better solution
+        # is found or the bug is fixed.
+
+        def handler(gc):
+            print("SIGINT sent. Interrupted by user!")
+            gc.quit()
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, 2, handler, gc)  # 2 = SIGINT
         Gtk.main()
     except KeyboardInterrupt:
         gc.emit_quit()
-        print "Interrupted by user!"
+        print("Interrupted by user!")
     except Exception as exc:
         # debug
         # print traceback.format_exc()
 
         msg = "Error starting Galicaster: {0}".format(exc)
-        print msg
+        print(msg)
 
         from galicaster.core import context
         logger = context.get_logger()
@@ -55,8 +68,7 @@ def main(args):
         d.emit("quit")
         return -1
 
-
     return 0
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv)) 
+    sys.exit(main(sys.argv))
