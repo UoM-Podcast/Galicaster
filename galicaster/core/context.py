@@ -180,7 +180,8 @@ def get_repository():
             conf.get('basic', 'repository'),
             conf.get_hostname(),
             template,
-            get_logger())
+            get_logger(),
+            conf)
 
     return __galicaster_context['repository']
 
