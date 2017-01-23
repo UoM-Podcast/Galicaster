@@ -59,7 +59,7 @@ class GCNagios(object):
         self.exit_code = exit_code
 
     def nagios_default_state(self, sender=None):
-        if context.get_recorder().is_error:
+        if context.get_recorder().is_error():
             pass
         else:
             self.nag_error = nagios_status[NAGIOS_OK] + ' - gstreamer working'
