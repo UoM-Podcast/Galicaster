@@ -269,6 +269,12 @@ def set_episode(mp):
                 text = doc.createTextNode(mp.metadata_episode[name].isoformat() + "Z")
                 created.appendChild(text)
                 xml.appendChild(created)
+            elif name == "audience":
+                for each_audience in mp.metadata_episode[name]:
+                    created = doc.createElement("dcterms:" + name)
+                    text = doc.createTextNode(unicode(each_audience))
+                    created.appendChild(text)
+                    xml.appendChild(created)
             else:
                 created = doc.createElement("dcterms:" + name)
                 text = doc.createTextNode(unicode(mp.metadata_episode[name]))

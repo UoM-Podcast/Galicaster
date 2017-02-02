@@ -682,7 +682,7 @@ class Mediapackage(object):
         Intarnal function to marshal mediapackage atributes and 
         metadata_episode dict with Dubincore episode file
         """
-        for i in self.getCatalogs():               
+        for i in self.getCatalogs():
             if i.getFlavor() == "dublincore/episode":
                 dom = minidom.parse(i.getURI())                 
                 # retrive terms
@@ -690,7 +690,10 @@ class Mediapackage(object):
                 for node in dom.firstChild.childNodes:
                     if not node.nodeName.count('dcterms:'):
                         continue
-                    EPISODE_TERMS.append(node.nodeName.split(':')[1])    
+                    EPISODE_TERMS.append(node.nodeName.split(':')[1])
+                # Allow for multiple audience tags
+                count = 0
+                AUDIENCE_TAGS = []
                 for name in EPISODE_TERMS:
                     if name in ["created"]:
                         creat = _checknget(dom, "dcterms:" + name)
@@ -698,14 +701,20 @@ class Mediapackage(object):
                             if creat[-1] == "Z":
                                 self.setDate(datetime.strptime(creat, "%Y-%m-%dT%H:%M:%SZ"))
                             else:
-                                self.setDate(datetime.strptime(creat, "%Y-%m-%dT%H:%M:%S")) 
+                                self.setDate(datetime.strptime(creat, "%Y-%m-%dT%H:%M:%S"))
                                 # parse erroneous format too
-                    elif name in ['isPartOf', 'ispartof']: 
+                    elif name in ['isPartOf', 'ispartof']:
                         new = _checknget(dom, "dcterms:"+name)
                         old = _checknget(dom, "dcterms:"+name.lower() )
                         self.metadata_episode[name] = new if new != None else old
+                    elif name in ['audience']:
+                        aud = _checknget(dom, "dcterms:" + name, count)
+                        AUDIENCE_TAGS.append(aud)
+                        count +=1
                     else:
-                        self.metadata_episode[name] = _checknget(dom, "dcterms:" + name)                     
+                        self.metadata_episode[name] = _checknget(dom, "dcterms:" + name)
+                if AUDIENCE_TAGS is not []:
+                    self.metadata_episode['audience'] = AUDIENCE_TAGS
             elif i.getFlavor() == "dublincore/series": # FIXME cover series data and create files if dont exist
                 dom = minidom.parse(i.getURI())                 
                 # retrive terms
