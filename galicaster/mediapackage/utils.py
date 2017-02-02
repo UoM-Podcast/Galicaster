@@ -53,10 +53,10 @@ def _checkget(element):
     return sout
 
 
-def _checknget(archive, name): 
+def _checknget(archive, name, elem=0):
     if archive.getElementsByTagName(name).length != 0:
         try:
-            sout = _checkget(archive.getElementsByTagName(name)[0])
+            sout = _checkget(archive.getElementsByTagName(name)[int(elem)])
         except AttributeError:
             sout = ''
         return sout
