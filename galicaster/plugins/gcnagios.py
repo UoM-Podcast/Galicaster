@@ -72,6 +72,10 @@ class GCNagios(object):
             self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message.replace('\n', '') + ' Reboot Required'
             self.exit_code = NAGIOS_CRITICAL
             self.make_plugin()
+            if error_message.endswith('The buffer type is not supported, or the index is out of bounds, or no buffers have been allocated yet, or the userptr or length are invalid. device /dev/video0)'):
+                logger.info("GStreamer error: " + error_message)
+                logger.info("killing Galicaster")
+                os.system("/usr/share/galicaster/contrib/scripts/kill_gc")
         else:
             self.nag_error = 'OK - GStreamer working'
             self.make_plugin()
