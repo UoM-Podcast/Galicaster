@@ -95,6 +95,11 @@ class FindRecordings(object):
                     mp_list.update(mp)
                 else:
                     merge(mpUri, repofile, dest, mp_list)
+            else:
+                self.rectemp_exists = False
+                # clean up temp files
+                os.remove(dest)
+                os.remove(repofile)
 
 
 
