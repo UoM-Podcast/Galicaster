@@ -223,10 +223,15 @@ def set_manifest(mp, use_namespace=True):
     doc = minidom.Document()
     xml = doc.createElement("mediapackage")
     if use_namespace:
-        xml.setAttribute("xmlns", "http://mediapackage.opencastproject.org")
+        xml.setAttribute("xmlns", "http://mediapackage.opencastproject.org")  
     xml.setAttribute("id", mp.getIdentifier())
-    xml.setAttribute("start", mp.getDate().isoformat())
-    if mp.getDuration() != None:
+    oc_start = mp.getTemporalDate()
+    # if Mediapackage has valid temporal tag from opencast schedule use that
+    if oc_start:
+        xml.setAttribute("start", oc_start.isoformat())
+    else:
+        xml.setAttribute("start", mp.getDate().isoformat())
+    if mp.getDuration() is None:
         xml.setAttribute("duration", unicode(mp.getDuration()))
 
     doc.appendChild(xml)
