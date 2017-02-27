@@ -185,8 +185,13 @@ def set_manifest(mp, use_namespace=True):
     xml = doc.createElement("mediapackage") 
     if use_namespace:
         xml.setAttribute("xmlns", "http://mediapackage.opencastproject.org")  
-    xml.setAttribute("id", mp.getIdentifier()) 
-    xml.setAttribute("start", mp.getDate().isoformat())
+    xml.setAttribute("id", mp.getIdentifier())
+    oc_start = mp.getTemporalDate()
+    # if Mediapackage has valid temporal tag from opencast schedule use that
+    if oc_start:
+        xml.setAttribute("start", oc_start.isoformat())
+    else:
+        xml.setAttribute("start", mp.getDate().isoformat())
     if mp.getDuration() != None:
         xml.setAttribute("duration", unicode(mp.getDuration())) 
     

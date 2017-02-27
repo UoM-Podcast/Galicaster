@@ -376,7 +376,14 @@ class Mediapackage(object):
         self.metadata_episode['description'] = description
 
     description = property(getDescription, setDescription)
-            
+
+    def getTemporalDate(self):
+        try:
+            g = re.search('start=(.*)Z; end=(.*)Z;', self.metadata_episode['temporal'])
+            return datetime.strptime(g.group(1), "%Y-%m-%dT%H:%M:%S")
+        except KeyError:
+            return None
+
     def getDate(self):
         return self.metadata_episode["created"]
 
