@@ -1,4 +1,4 @@
-galicaster (1.3.2-uom6.5) precise; urgency=low
+galicaster (1.3.2-uom6.6) precise; urgency=low
 
   Upstream:
   * Fixed Galicaster UI stability issue (Issue #93)
@@ -15,6 +15,10 @@ galicaster (1.3.2-uom6.5) precise; urgency=low
   * Fixed serious bug that crashed GC when using Datapath capture cards.
 
   UoM:
+  * Fixed, checkrepo plugin will not double delay ingest for late starting mediapackage schedule recordings
+  * Fixed, do not change the mediapackage manifest.xml starttime
+  * Fixed, allow more than one 'audience tag' in the mediapackage episode.xml
+  * Changed, restart galicaster on gstreamer error
   * Changed, ddp get audiostream host from GC config now
   * Enhancement, QRcode can now select bins to ignore with a conf.ini parameter
   * Fixed, Failover mic pauses when galicaster paused
