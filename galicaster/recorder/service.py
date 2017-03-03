@@ -199,8 +199,9 @@ class RecorderService(object):
         self.dispatcher.emit("recorder-stopped", self.current_mediapackage.getIdentifier())
 
         code = 'manual' if self.current_mediapackage.manual else 'scheduled'
-        if self.conf.get_lower('ingest', code) == 'immediately':
-            self.worker.enqueue_job_by_name('ingest', self.current_mediapackage)
+        if self.current_mediapackage.getOpStatus('ingest') != mediapackage.OP_NIGHTLY:
+            if self.conf.get_lower('ingest', code) == 'immediately':
+                self.worker.enqueue_job_by_name('ingest', self.current_mediapackage)
         elif self.conf.get_lower('ingest', code) == 'nightly':
             self.worker.enqueue_nightly_job_by_name('ingest', self.current_mediapackage)
         self.current_mediapackage = None

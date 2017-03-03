@@ -58,7 +58,6 @@ class FindRecordings(object):
         repofile = os.path.join(mpUri, self.rectemp_uris_attachment)
 
         if os.path.isfile(dest):
-            print '1'
             mp_list = context.get_repository()
             rectemp = mp_list.get_rectemp_path()
             timesfile = open(dest, "r")
@@ -69,18 +68,12 @@ class FindRecordings(object):
             timesfile.close()
             repocheck = open(repofile, "a")
             for fname in os.listdir(rectemp):
-                print '2'
                 filepath = os.path.join(rectemp, fname)
                 if os.path.isdir(filepath):
-                    print '3'
                     for item in (os.listdir(filepath)):
-                        print '4'
                         fileitem = os.path.join(filepath, item)
                         timestamp = os.path.getmtime(fileitem)
                         time = datetime.datetime.utcfromtimestamp(timestamp)
-                        print time
-                        print start
-                        print end
                         if start < time and end > time:
                             self.rectemp_exists = True
                             repocheck.write(filepath+"\n")
@@ -89,15 +82,12 @@ class FindRecordings(object):
             repocheck.close()
             # check for real rectemp files, stops merge happening on mp's that started after start time
             if self.rectemp_exists:
-                print '5'
                 if self.delay:
-                    # FIXME DELAYED MERGE NOT WORKING AS WORKER STILL FORCE INGESTS
                     # stop ingest for now, set to delayed
                     logger.info('delaying merge of mp parts and ingest')
                     mp.setOpStatus('ingest', mediapackage.OP_NIGHTLY)
                     mp_list.update(mp)
                 else:
-                    print '6'
                     self.merge(mp, repofile, dest, mp_list)
             else:
                 self.rectemp_exists = False
@@ -122,7 +112,6 @@ class FindRecordings(object):
         # get list of rectemp files
         rectemps_list = sorted(rectemps)
         rectemps_list.append(mpUri)
-        print rectemps_list
         # get the track file names + mimetype
         tracks = context.get_conf().get_current_profile().tracks
         for track in tracks:
@@ -150,7 +139,6 @@ class FindRecordings(object):
             os.remove(self.pause_state_file)
 
     def merge_delayed(self, signal):
-        # FIXME DELAYED MERGE NOT WORKING AS WORKER STILL FORCE INGESTS
         # merge and ingest the delayed mp's
         if self.delay:
             repo = context.get_repository()
@@ -164,7 +152,6 @@ class FindRecordings(object):
                         # make sure failover mic audio used correctly
                         failovermic.do_async_check(mp, mpUri)
                         logger.info('Starting Ingest of merge delayed mediapackage: {}'.format(mp_id))
-                        # FIXME ingesting done differently from 1.3.x
                         worker.ingest(mp)
 
     def check_repository(self, signal):
