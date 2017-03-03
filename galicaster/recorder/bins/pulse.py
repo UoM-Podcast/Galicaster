@@ -56,7 +56,7 @@ class GCpulse(Gst.Bin, base.Base):
             },
         "vumeter": {
             "type": "boolean",
-            "default": "True",
+            "default": "False",
             "description": "Activate Level message",
             },
         "player": {
