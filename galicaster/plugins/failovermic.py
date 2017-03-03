@@ -22,6 +22,7 @@ Gst.init(None)
 import os
 import shutil
 from galicaster.core import context
+from galicaster.mediapackage import mediapackage
 
 repo = context.get_repository()
 
@@ -62,13 +63,6 @@ def init():
         pass
 
 
-# def setup_failover_dir(self):
-#     global logger
-#     # check to see if temp dir exists if not make one
-#     if not os.path.exists(FAIL_DIR):
-#         os.makedirs(FAIL_DIR)
-
-
 def get_audio_pathname():
     global conf
     audio_tracks = conf.get_current_profile().get_audio_tracks()
@@ -86,8 +80,6 @@ def remove_temp(tmpf):
 def save_failover_audio(self, mp_id):
     global repo, logger, temp_amp
     mp = repo.get(mp_id)
-    mpUri = mp.getURI()
-
     #compare rms from pipeline with set threshold
     with open(temp_amp) as f:
         amp_list = f.readlines()
@@ -102,32 +94,50 @@ def save_failover_audio(self, mp_id):
         else:
             threshold = MAX_AMPLITUDE
         if pipeline_amp <= float(threshold):
-            logger.info('Audio quiet - will be replaced')
-            aud_tracks = get_audio_pathname()
-            for i in aud_tracks:
-                if i.file == "failover.mp3":
-                    FAILOVER_FILE = os.path.join(mpUri, os.path.basename(i.file))
-            bins = recorder.recorder.bins
-            for name, bin in bins.iteritems():
-                if name == 'AudioSource':
-                    filename = "presenter.mp3"
-            if filename:
-                logger.debug("Audio track found, so replacing it...")
-                dest = os.path.join(mpUri, os.path.basename(filename))
+
+            # if delayed don't finish the audio replacement yet
+            if mp.getOpStatus('ingest') == mediapackage.OP_NIGHTLY:
+                pass
             else:
-                logger.debug("No audio track found, so create a new one")
-                dest = os.path.join(mpUri, os.path.basename(FAILOVER_FILE))
-            logger.debug("Copying from {} to {}".format(FAILOVER_FILE, dest))
-            try:
-                shutil.copyfile(FAILOVER_FILE, dest)
-                os.remove(FAILOVER_FILE)
-                mp.remove('track-0')
-                repo.update(mp)
-                logger.info('Replaced quite audio with failover recording, MP %s and URI: %s', mp_id, mpUri)
-            except Exception as exc:
-                logger.error("Error trying to save failover audio: {}".format(exc))
-        
+                replace_audio(mp)
+        else:
+            mp.remove('track-0')
     remove_temp(temp_amp)
+
+
+def replace_audio(mp):
+    mpUri = mp.getURI()
+    logger.info('Audio quiet - will be replaced')
+    aud_tracks = get_audio_pathname()
+    for i in aud_tracks:
+        if i.file == "failover.mp3":
+            FAILOVER_FILE = os.path.join(mpUri, os.path.basename(i.file))
+    bins = recorder.recorder.bins
+    for name, bin in bins.iteritems():
+        if name == 'AudioSource':
+            filename = "presenter.mp3"
+    if filename:
+        logger.debug("Audio track found, so replacing it...")
+        dest = os.path.join(mpUri, os.path.basename(filename))
+    else:
+        logger.debug("No audio track found, so create a new one")
+        dest = os.path.join(mpUri, os.path.basename(FAILOVER_FILE))
+    logger.debug("Copying from {} to {}".format(FAILOVER_FILE, dest))
+    try:
+        shutil.copyfile(FAILOVER_FILE, dest)
+        # os.remove(FAILOVER_FILE)
+        mp.remove('track-0')
+        repo.update(mp)
+        logger.info('Replaced quite audio with failover recording, URI: %s', mpUri)
+    except Exception as exc:
+        logger.error("Error trying to save failover audio: {}".format(exc))
+
+
+def do_async_check(mp, mpUri):
+    # look for failover audio file
+    temp_failaudio_loc = os.path.join(mpUri, os.path.basename(FAILOVER_FILE))
+    if os.path.exists(temp_failaudio_loc):
+        replace_audio(mp)
 
 
 def check_pipeline_amp(self, valor, valor2, stereo):

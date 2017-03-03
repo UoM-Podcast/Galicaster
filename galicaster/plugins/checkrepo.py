@@ -18,6 +18,8 @@ import datetime
 import os
 import subprocess
 import shutil
+import uuid
+
 
 from galicaster.core import context
 from galicaster.mediapackage import mediapackage
@@ -119,7 +121,7 @@ class FindRecordings(object):
             track_file = track.file
             add_track = [s + '/{}'.format(track_file) for s in rectemps_list]
             rectemps_fmted = ('|').join(add_track)
-            temp_track_file = 'temp_1.{}'.format(track_file.split(".")[-1])
+            temp_track_file = 'temp_{}.{}'.format(str(uuid.uuid4())[:8], track_file.split(".")[-1])
             # do a file concat per track into the mp
             full_cmd = 'ffmpeg -i "concat:{}" -c copy {}/{}'.format(rectemps_fmted, mpUri, temp_track_file)
             subprocess.call(full_cmd, shell=True)
@@ -152,7 +154,7 @@ class FindRecordings(object):
                         # make sure failover mic audio used correctly
                         failovermic.do_async_check(mp, mpUri)
                         logger.info('Starting Ingest of merge delayed mediapackage: {}'.format(mp_id))
-                        worker.ingest(mp)
+                        worker.enqueue_job_by_name('ingest', mp)
 
     def check_repository(self, signal):
         # mp_list is collection of mediapackages ID's
