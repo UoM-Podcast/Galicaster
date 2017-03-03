@@ -80,6 +80,7 @@ def remove_temp(tmpf):
 def save_failover_audio(self, mp_id):
     global repo, logger, temp_amp
     mp = repo.get(mp_id)
+    mpUri = mp.getURI()
     #compare rms from pipeline with set threshold
     with open(temp_amp) as f:
         amp_list = f.readlines()
@@ -101,6 +102,7 @@ def save_failover_audio(self, mp_id):
             else:
                 replace_audio(mp)
         else:
+            os.remove(os.path.join(mpUri, os.path.basename(FAILOVER_FILE)))
             mp.remove('track-0')
     remove_temp(temp_amp)
 
