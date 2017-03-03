@@ -964,6 +964,16 @@ class Profile(object):
 
         return self.tracks
 
+    def get_audio_tracks(self):
+        """
+        """
+        audio_tracks = []
+        for indx, element in enumerate(self.tracks):
+            if element['device'] in ['audiotest', 'autoaudio', 'pulse']:
+                audio_tracks.append(element)
+
+        return audio_tracks
+
 
     #TODO error, be careful with self.tracks(. It's not a method
     def reorder_tracks(self, order=[]):
