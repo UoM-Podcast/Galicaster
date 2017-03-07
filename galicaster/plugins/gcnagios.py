@@ -35,8 +35,7 @@ def init():
     try:
         dispatcher = context.get_dispatcher()
         make_plugin_path()
-        plugin_path = conf_folder + GC_NAGIOS_PLUGINS_DIR
-        gcn = GCNagios(plugin_path, plugin_template)
+        gcn = GCNagios()
         dispatcher.connect('recorder-error', gcn.nagios_gst_error)
         dispatcher.connect('init', gcn.nagios_default_state)
 
@@ -52,10 +51,10 @@ def make_plugin_path():
 
 class GCNagios(object):
 
-    def __init__(self, plugin_file, template, nag_error=None,  exit_code=NAGIOS_OK):
+    def __init__(self, nag_error=None,  exit_code=NAGIOS_OK):
         self.nag_error = nag_error
-        self.plugin_path = plugin_file
-        self.plugin_template = template
+        self.plugin_path = conf_folder + GC_NAGIOS_PLUGINS_DIR
+        self.plugin_template = plugin_template
         self.exit_code = exit_code
 
     def nagios_default_state(self, sender=None):
