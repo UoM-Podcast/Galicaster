@@ -36,7 +36,6 @@ def init():
         dispatcher = context.get_dispatcher()
         make_plugin_path()
         gcn = GCNagios()
-        dispatcher.connect('recorder-error', gcn.nagios_gst_error)
         dispatcher.connect('init', gcn.nagios_default_state)
 
     except ValueError:

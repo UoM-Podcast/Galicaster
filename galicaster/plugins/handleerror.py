@@ -1,4 +1,7 @@
 __author__ = 'andrew wilson'
+"""
+Handle errors coming from galicaster to alert via nagios and perform actions like killing galicaster by script
+"""
 
 import os
 
@@ -8,8 +11,6 @@ from galicaster.plugins import gcnagios
 logger = context.get_logger()
 worker = context.get_worker()
 conf = context.get_conf()
-
-conf_folder = '/etc/galicaster/'
 
 
 def init():
@@ -42,7 +43,8 @@ class HandleError(object):
             for err in matcher:
                 if msg.startswith(err):
                     logger.info(err)
-                    gcnagios.GCNagios().nagios_gst_error(None, err)
+                    if conf.get_boolean('plugins', 'gcnagios') is True:
+                        gcnagios.GCNagios().nagios_gst_error(None, err)
                     if self.action == 'kill':
                         logger.info("killing Galicaster")
                         try:
