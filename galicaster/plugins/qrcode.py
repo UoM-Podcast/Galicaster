@@ -88,6 +88,7 @@ def init():
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
         qr.set_add_smil(conf.get_boolean('qrcode', 'mp_add_smil') or False)
         dispatcher.connect('recorder-stopped', qr.qrcode_update_mediapackage)
+        dispatcher.connect('timer-short', qr.qr_heartbeat)
 
     except ValueError:
         pass
@@ -132,6 +133,7 @@ class QRCodeScanner():
         self.finish_timeout_end = None
         self.finish_timeframe = finish_timeframe
         self.finish_show_time = finish_show_time
+        self.last_timeout = None
 
     # set additional parameters
     def set_trimhold(self, v):
@@ -165,7 +167,6 @@ class QRCodeScanner():
         #    self.logger.debug(e)
 
     def qrcode_on_sync_message(self, sender, message): #, bus, message
-        print message
         if message.get_name() == "barcode":
             # Message fields are:
             # name, timestamp, type, symbol, quality
@@ -181,13 +182,22 @@ class QRCodeScanner():
             # ignore non qrcodes
             if type == 'QR-Code':
                 self.handle_symbol(symbol, timestamp)
-        else:
+
+    def check_finish_active(self, timeout):
+        if self.last_timeout == timeout:
             self.finish_timeout_start = None
             self.finish_timeout_end = None
+        else:
+            self.last_timeout = timeout
+
+    def qr_heartbeat(self, signal):
+        # check to see if finish QR ocode still active, if timeout hasnt changed, reset
+        if self.recorder.is_recording():
+            self.check_finish_active(self.finish_timeout_end)
 
     def handle_symbol(self, symbol, timestamp):
         gst_status = self.recorder.recorder.get_status()[1]
-        if self.recorder.is_recording and gst_status == Gst.State.PLAYING:
+        if self.recorder.is_recording() and gst_status == Gst.State.PLAYING:
             # stop recording early on qrcode, requires scheduled recording,
             # <= user defined period (min) before ending and user defined period (sec) of qrcode showing
             if self.symbol_finish == symbol:
@@ -198,14 +208,14 @@ class QRCodeScanner():
                     end = start + datetime.timedelta(seconds=(mp.getDuration() / 1000))
                     finish_zone = end - datetime.timedelta(minutes=self.finish_timeframe)
                     if finish_zone <= datetime.datetime.utcnow():
-                        if self.finish_timeout_start == None:
+                        if not self.finish_timeout_start:
                             self.finish_timeout_start = timestamp / NANO2SEC
-
                         self.finish_timeout_end = timestamp / NANO2SEC
-                        print self.finish_timeout_end
-                        print self.finish_timeout_start
                         if (self.finish_timeout_end - self.finish_timeout_start) >= self.finish_show_time:
                             self.logger.info('Ending Recording early after QRcode command')
+                            # cleanup timeouts data
+                            self.finish_timeout_end = None
+                            self.finish_timeout_start = None
                             # this function does not like to be in another thread!
                             self.recorder.stop()
 
