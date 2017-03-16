@@ -84,7 +84,7 @@ def has_succeeded(mp_id, mp):
             logger.debug('mp {0}. mhorn state: {1}'.format(mp_id, workflow_state))
             if workflow_state == 'FAILED':
                 logger.info('mp {} : Workflow Failed'.format(mp_id))
-                mp.addAttachmentAsString('#' + workflow_state, 'workflow.status', False, 'workflow.status')
+                mp.addAttachmentAsString('#' + workflow_state, 'workflow.status', 'workflow.status')
                 mp.setOpStatus('ingest', mediapackage.OP_FAILED)
                 repo.update(mp)
                 return False

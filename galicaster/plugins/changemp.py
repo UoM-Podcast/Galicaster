@@ -59,5 +59,5 @@ def changemp(self, action, mp):
         for prpt, value in occap.items():
             occap_list.append(prpt + '=' + value)
         properties_str = '\n'.join(occap_list)
-        mp.addAttachmentAsString(properties_str, 'org.opencastproject.capture.agent.properties', True, 'org.opencastproject.capture.agent.properties')
+        mp.addAttachmentAsString(properties_str, 'org.opencastproject.capture.agent.properties', 'org.opencastproject.capture.agent.properties')
         logger.info('mediapackage id:{0} changed workflow from {1} to {2}'.format(mp.getIdentifier(), workflow, workflow_new))
