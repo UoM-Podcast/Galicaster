@@ -25,6 +25,7 @@ from galicaster.core import context
 import re
 from threading import Timer
 from os import path, utime, remove
+import datetime
 from gi.repository import Gst
 Gst.init(None)
 
@@ -67,12 +68,16 @@ def init():
         symbols['start'] = conf.get('qrcode', 'start_code') or 'start'
         symbols['stop'] = conf.get('qrcode', 'stop_code') or 'stop'
         symbols['hold'] = conf.get('qrcode', 'hold_code') or 'hold'
+        symbols['finish'] = conf.get('qrcode', 'finish_code') or 'finish'
         rescale = conf.get('qrcode', 'rescale') or 'source'
         drop_frames = conf.get_boolean('qrcode', 'drop_frames') or False
         buffers = conf.get_int('qrcode', 'buffers') or 200
         hold_timeout = conf.get_int('qrcode', 'hold_timeout') or 1  # secs
         ignore_bins = conf.get('qrcode', 'ignore_track_name') or None
-        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, context.get_logger())
+        finish_timeframe = conf.get_int('qrcode', 'finish_timeframe') or 30  # mins
+        finish_show_time = conf.get_int('qrcode', 'finish_show_time') or 10  # secs
+        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
+                           finish_show_time, context.get_logger())
 
         dispatcher = context.get_dispatcher()
         dispatcher.connect('recorder-ready', qr.qrcode_add_pipeline)
@@ -83,16 +88,19 @@ def init():
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
         qr.set_add_smil(conf.get_boolean('qrcode', 'mp_add_smil') or False)
         dispatcher.connect('recorder-stopped', qr.qrcode_update_mediapackage)
+        dispatcher.connect('timer-short', qr.qr_heartbeat)
 
     except ValueError:
         pass
 
 
 class QRCodeScanner():
-    def __init__(self, mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, logger=None):
+    def __init__(self, mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
+                 finish_show_time, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
+        self.symbol_finish = symbols['finish']
         self.mode = mode
         self.rescale = rescale
         self.drop_frames = drop_frames
@@ -106,6 +114,7 @@ class QRCodeScanner():
         self.hold_timestamp = 0
         self.hold_timer = None
         self.hold_timer_timestamp = 0
+        self.finish_timer = None
         self.logger = logger
         self.pipeline = None
         self.bins = None
@@ -120,6 +129,11 @@ class QRCodeScanner():
         self.add_edits = False
         self.recorder = context.get_recorder()
         self.dispatcher = context.get_dispatcher()
+        self.finish_timeout_start = None
+        self.finish_timeout_end = None
+        self.finish_timeframe = finish_timeframe
+        self.finish_show_time = finish_show_time
+        self.last_timeout = None
 
     # set additional parameters
     def set_trimhold(self, v):
@@ -169,9 +183,42 @@ class QRCodeScanner():
             if type == 'QR-Code':
                 self.handle_symbol(symbol, timestamp)
 
+    def check_finish_active(self, timeout):
+        if self.last_timeout == timeout:
+            self.finish_timeout_start = None
+            self.finish_timeout_end = None
+        else:
+            self.last_timeout = timeout
+
+    def qr_heartbeat(self, signal):
+        # check to see if finish QR ocode still active, if timeout hasnt changed, reset
+        if self.recorder.is_recording():
+            self.check_finish_active(self.finish_timeout_end)
+
     def handle_symbol(self, symbol, timestamp):
         gst_status = self.recorder.recorder.get_status()[1]
-        if self.recorder.is_recording and gst_status == Gst.State.PLAYING:
+        if self.recorder.is_recording() and gst_status == Gst.State.PLAYING:
+            # stop recording early on qrcode, requires scheduled recording,
+            # <= user defined period (min) before ending and user defined period (sec) of qrcode showing
+            if self.symbol_finish == symbol:
+                mp = self.recorder.current_mediapackage
+                if not mp.manual:
+                    # self.finish_timer = None
+                    start = mp.getDate()
+                    end = start + datetime.timedelta(seconds=(mp.getDuration() / 1000))
+                    finish_zone = end - datetime.timedelta(minutes=self.finish_timeframe)
+                    if finish_zone <= datetime.datetime.utcnow():
+                        if not self.finish_timeout_start:
+                            self.finish_timeout_start = timestamp / NANO2SEC
+                        self.finish_timeout_end = timestamp / NANO2SEC
+                        if (self.finish_timeout_end - self.finish_timeout_start) >= self.finish_show_time:
+                            self.logger.info('Ending Recording early after QRcode command')
+                            # cleanup timeouts data
+                            self.finish_timeout_end = None
+                            self.finish_timeout_start = None
+                            # this function does not like to be in another thread!
+                            self.recorder.stop()
+
             if self.mode == 'hold':
                 if self.symbol_hold == symbol:
                     # pause
@@ -329,7 +376,7 @@ class QRCodeScanner():
 
             prpts_str = '\n'.join(occap_list)
 
-            mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties', False,
+            mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties',
                                      'org.opencastproject.capture.agent.properties')
 
     def create_smil(self, mp, occap):
