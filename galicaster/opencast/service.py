@@ -95,6 +95,7 @@ class OCService(object):
         except Exception as exc:
             self.logger.warning('Problems to connect to opencast server: {0}'.format(exc))
             self.__set_opencast_down()
+        self.jobs.put((self.set_state, ()))
 
 
     def __check_recording_started(self, element=None, mp_id=None):
@@ -148,9 +149,7 @@ class OCService(object):
         Notes:
             This method is invoked every short beat duration. (10 seconds by default)
         """
-        if self.net:
-            self.jobs.put((self.set_state, ()))
-        else:
+        if not self.net:
             self.jobs.put((self.init_client, ()))
 
 
@@ -183,6 +182,7 @@ class OCService(object):
         try:
             self.client.welcome()
             self.__set_opencast_up()
+            self.jobs.put((self.set_state, ()))
             self.jobs.put((self.process_ical, ()))
             self.jobs.put((self.update_series,()))
             if self.conf.tracks_visible_to_opencast():
