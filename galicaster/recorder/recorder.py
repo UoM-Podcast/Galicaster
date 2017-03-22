@@ -104,6 +104,8 @@ class Recorder(object):
 
         if status[0] == Gst.StateChangeReturn.ASYNC:
             self.__emit_error('Timeout getting recorder status, current status: {}'.format(status), '', stop=False)
+            logger.debug("reloading gstreamer pipeline")
+            self.dispatcher.emit('action-reload-profile')
 
         return status
 
