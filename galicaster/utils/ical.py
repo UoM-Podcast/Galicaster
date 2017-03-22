@@ -36,6 +36,8 @@ def get_events_from_string_ical(ical_data, limit=0):
             events = cal.walk('vevent')[count:limit + count]
     else:
         events = cal.walk('vevent')
+    # reset the counter
+    count = 0
     return events
 
 
