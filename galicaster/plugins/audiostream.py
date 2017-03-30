@@ -33,7 +33,7 @@ conf = context.get_conf()
 dispatcher = context.get_dispatcher()
 _http_host = conf.get('ddp', 'http_host')
 _id = conf.get('ingest', 'hostname')
-_port = conf.get('audiostream', 'port') or 31337
+_port = conf.get_int('audiostream', 'port') or 31337
 src = conf.get('audiostream', 'src') or 'alsasrc'
 device = conf.get('audiostream', 'device') or 'hw:0'
 
