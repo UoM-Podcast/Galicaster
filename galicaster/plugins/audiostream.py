@@ -35,7 +35,11 @@ _http_host = conf.get('ddp', 'http_host')
 _id = conf.get('ingest', 'hostname')
 _port = conf.get_int('audiostream', 'port') or 31337
 src = conf.get('audiostream', 'src') or 'alsasrc'
-device = conf.get('audiostream', 'device') or 'hw:0'
+device = conf.get('audiostream', 'device') or None
+if device:
+    device_params = 'device=' + device
+else:
+    device_params = ''
 
 
 def init():
@@ -87,7 +91,7 @@ class AudioStreamer(BaseHTTPRequestHandler):
             self._writeheaders()
             DataChunkSize = 10000
             devnull = open(os.devnull, 'wb')
-            command = 'gst-launch-1.0 {} device={} ! '.format(src, device) + \
+            command = 'gst-launch-1.0 {} {} ! '.format(src, device_params) + \
                       'lamemp3enc bitrate=128 cbr=true ! ' + \
                       'filesink location=/dev/stdout'
             p = subprocess.Popen(
