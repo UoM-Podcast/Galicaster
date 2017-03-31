@@ -99,16 +99,22 @@ class OCService(object):
 
 
     def __check_recording_started(self, element=None, mp_id=None):
-        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
+        try:
+            occap = mp.getOCCaptureAgentProperties()
+        except AttributeError:
+            occap = None
+        if mp and occap:
             self.jobs.put((self.__set_recording_state, (mp, 'capturing')))
 
 
     def __check_recording_stopped(self, element=None, mp_id=None):
-        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
+        try:
+            occap = mp.getOCCaptureAgentProperties()
+        except AttributeError:
+            occap = None
+        if mp and occap:
             self.__set_recording_state(mp, 'capture_finished')
 
 
@@ -164,12 +170,12 @@ class OCService(object):
             self.jobs.put((self.process_ical,()))
             self.jobs.put((self.update_series,()))
 
-            
+
     def update_series(self):
         self.logger.debug('Updating series from server')
         self.series = get_series()
 
-        
+
     def init_client(self, sender=None):
         """Tries to initialize opencast's client and set net's state.
         If it's unable to connecto to opencast server, logger prints ir properly and net is set True.
