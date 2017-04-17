@@ -13,8 +13,6 @@
 
 from datetime import datetime, timedelta
 from gi.repository import GObject
-from threading import Timer
-
 
 class Heartbeat(object):
 
@@ -30,7 +28,7 @@ class Heartbeat(object):
         self.logger         = logger
 
     def init_timer(self):
-        Timer(self.get_seg_until_next(), self.__notify_timer_daily).start()
+        GObject.timeout_add_seconds(self.get_seg_until_next(), self.__notify_timer_daily)
         GObject.timeout_add_seconds(self.interval_short, self.__notify_timer_short)
         GObject.timeout_add_seconds(self.interval_long, self.__notify_timer_long)
 
@@ -47,7 +45,9 @@ class Heartbeat(object):
         self.dispatcher.emit('timer-nightly')
         if self.logger:
             self.logger.debug('timer-nightly in %s', seg)
-        Timer(seg, self.__notify_timer_daily).start()
+
+        GObject.timeout_add_seconds(seg, self.__notify_timer_long)
+        return False
 
     def __notify_timer_short(self):
         self.dispatcher.emit('timer-short')
