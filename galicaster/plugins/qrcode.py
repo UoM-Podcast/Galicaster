@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from galicaster.core import context
+from galicaster.plugins import gcmail
 
 import re
 from threading import Timer
@@ -76,8 +77,9 @@ def init():
         ignore_bins = conf.get('qrcode', 'ignore_track_name') or None
         finish_timeframe = conf.get_int('qrcode', 'finish_timeframe') or 30  # mins
         finish_show_time = conf.get_int('qrcode', 'finish_show_time') or 10  # secs
+        notify_email = conf.get_boolean('qrcode', 'notify_email') or False
         qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
-                           finish_show_time, context.get_logger())
+                           finish_show_time, notify_email, context.get_logger())
 
         dispatcher = context.get_dispatcher()
         dispatcher.connect('recorder-ready', qr.qrcode_add_pipeline)
@@ -96,7 +98,7 @@ def init():
 
 class QRCodeScanner():
     def __init__(self, mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
-                 finish_show_time, logger=None):
+                 finish_show_time, notify_email, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
@@ -133,6 +135,7 @@ class QRCodeScanner():
         self.finish_timeout_end = None
         self.finish_timeframe = finish_timeframe
         self.finish_show_time = finish_show_time
+        self.notify_email = notify_email
         self.last_timeout = None
 
     # set additional parameters
@@ -213,6 +216,8 @@ class QRCodeScanner():
                         self.finish_timeout_end = timestamp / NANO2SEC
                         if (self.finish_timeout_end - self.finish_timeout_start) >= self.finish_show_time:
                             self.logger.info('Ending Recording early after QRcode command')
+                            if self.notify_email:
+                                self.send_email(mp)
                             # cleanup timeouts data
                             self.finish_timeout_end = None
                             self.finish_timeout_start = None
@@ -391,4 +396,24 @@ class QRCodeScanner():
                 open(self.pause_state_file, 'a').close()
         else:
             remove(self.pause_state_file)
+
+    def send_email(self, mp):
+        # send email to email address(s) listed in the mediapackage
+        occap = mp.getOCCaptureAgentProperties()
+        mp_emailadd = occap[WORKFLOW_CONFIG + '.emailAddresses']
+        email_list = mp_emailadd.split(',')
+        subject = "Podcast stopped early"
+        message = """
+Hi, This is an automated email.
+
+This is confirming you have stopped the Podcast titled: {} early at {} using a QR code in {}.
+If this is not correct please reply to submit a support ticket.
+
+Kind regards,
+
+The Media Technologies Team
+IT Services""".format(mp.getTitle(), datetime.datetime.now(), occap['event.location'])
+        for email in email_list:
+            gcmail.GCEmail().send_mail(email, subject, message)
+
 
