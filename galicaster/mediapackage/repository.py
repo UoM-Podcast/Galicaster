@@ -139,7 +139,8 @@ class Repository(object):
             mp.setFromDict(info)
             # Overwrite some data
             mp.status = 4
-            mp.setTitle("Recovered - " + mp.getTitle())
+            if mp.manual:
+                mp.setTitle("Recovered - " + mp.getTitle())
             if not mp.getIdentifier():
                 mp.setNewIdentifier()
 
