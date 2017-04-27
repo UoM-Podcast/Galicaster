@@ -74,7 +74,6 @@ class OCService(object):
         self.dispatcher.connect("recorder-error", self.on_recorder_error)
 
         self.t_stop = None
-        self.occap = None
 
         self.mp_rec = None
         self.last_events = self.init_last_events()
@@ -98,39 +97,18 @@ class OCService(object):
 
 
     def __check_recording_started(self, element=None, mp_id=None):
-        """
-        Relays a 'capturing' recording state to Opencast for scheduled Mediapackages only based on the existance of an
-        org.opencastproject.capture.agent.properties file
-        :param element: Dispatcher element object
-        :param mp_id: Current Mediapackage ID
-        """
+        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        try:
-            self.t_stop = mp.getDuration()
-        except AttributeError:
-            pass
-        try:
-            self.occap = mp.getOCCaptureAgentProperties()
-        except AttributeError:
-            pass
-        if mp and self.occap:
+        self.t_stop = mp.getDuration()
+        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
             self.scheduler.mp_rec = mp_id
             self.jobs.put((self.__set_recording_state, (mp, 'capturing')))
 
 
     def __check_recording_stopped(self, element=None, mp_id=None):
-        """
-        Relays a 'capture_finished' recording state to Opencast for scheduled Mediapackages only based on the existance of an
-        org.opencastproject.capture.agent.properties file
-        :param element: Dispatcher element object
-        :param mp_id: Current Mediapackage ID
-        """
+        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        try:
-            self.occap = mp.getOCCaptureAgentProperties()
-        except AttributeError:
-            pass
-        if mp and self.occap:
+        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
             self.scheduler.mp_rec = None
             self.__set_recording_state(mp, 'capture_finished')
 
