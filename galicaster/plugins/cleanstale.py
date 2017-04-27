@@ -15,6 +15,7 @@
 
 """
 from galicaster.core import context
+from galicaster.mediapackage import mediapackage
 
 conf = None
 days = None
@@ -55,5 +56,7 @@ def clear_job(sender=None):
 
     logger.info("Found {} MP that have more than {} days". format(len(mps), days))
     for mp in mps:
-        logger.info("Removing MP {}".format(mp.getIdentifier()))
-        repo.delete(mp)
+        # only delete finished recordings
+        if mp.status == mediapackage.RECORDED and mp.getOpStatus('ingest') == mediapackage.OP_DONE:
+            logger.info('Mediapackage deleted UID:{0} {1}. older than {2} day(s)'.format(mp.getIdentifier(), mp.getURI(), days))
+            repo.delete(mp)

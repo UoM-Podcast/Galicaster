@@ -731,6 +731,17 @@ class Mediapackage(object):
 
     description = property(getDescription, setDescription)
 
+    def getTemporalDate(self):
+        """Gets the date and time of the mediapackage episode temporal start and end.
+        Returns:
+            Datetime: Datetime of the mediapackage episode temporal start and end.
+        """
+        try:
+            g = re.search('start=(.*)Z; end=(.*)Z;', self.metadata_episode['temporal'])
+            return datetime.strptime(g.group(1), "%Y-%m-%dT%H:%M:%S")
+        except KeyError:
+            return None
+
     def getDate(self):
         """Gets the date and time of the mediapackage episode creation.
         Returns:
@@ -1449,6 +1460,9 @@ class Mediapackage(object):
                     if not node.nodeName.count('dcterms:'):
                         continue
                     EPISODE_TERMS.append(node.nodeName.split(':')[1])
+                # Allow for multiple audience tags
+                count = 0
+                AUDIENCE_TAGS = []
                 for name in EPISODE_TERMS:
                     if name in ["created"]:
                         creat = _checknget(dom, "dcterms:" + name)
@@ -1471,8 +1485,14 @@ class Mediapackage(object):
                         new = _checknget(dom, "dcterms:"+name)
                         old = _checknget(dom, "dcterms:"+name.lower() )
                         self.metadata_episode[name] = new if new != None else old
+                    elif name in ['audience']:
+                        aud = _checknget(dom, "dcterms:" + name, count)
+                        AUDIENCE_TAGS.append(aud)
+                        count +=1
                     else:
                         self.metadata_episode[name] = _checknget(dom, "dcterms:" + name)
+                if AUDIENCE_TAGS is not []:
+                    self.metadata_episode['audience'] = AUDIENCE_TAGS
             elif i.getFlavor() == "dublincore/series": # FIXME cover series data and create files if dont exist
                 dom = minidom.parse(i.getURI())
                 # retrive terms

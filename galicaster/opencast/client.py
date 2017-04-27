@@ -21,6 +21,7 @@ from collections import OrderedDict
 import urlparse
 import urllib
 from galicaster.utils.miscellaneous import get_timezone
+import random
 
 try:
     from galicaster import __version__ as version
@@ -38,15 +39,17 @@ SERIES_ENDPOINT = 'series/series.json'
 SERVICE_REGISTRY_ENDPOINT = 'services/available.json'
 SEARCH_ENDPOINT = 'search/episode.json'
 WORKFLOWS_ENDPOINT = 'workflow/definitions.json'
+WORKFLOW_ENDPOINT = 'workflow/instance/{id}.json'
 
+WORKFLOW_SERVICE_TYPE = 'org.opencastproject.workflow'
 SEARCH_SERVICE_TYPE = 'org.opencastproject.search'
 INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 
 
 class OCHTTPClient(object):
-
-    def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False,
-                 connect_timeout=2, timeout=2, workflow='full', workflow_parameters={'trimHold':'true'},
+    
+    def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False, 
+                 random_ingest=False, stop_admin_ingest=False, connect_timeout=2, timeout=2, workflow='full', workflow_parameters={'trimHold':'true'},
                  ca_parameters={}, polling_short=10, polling_long=60, repo=None, logger=None):
         """
         Arguments:
@@ -80,6 +83,8 @@ class OCHTTPClient(object):
                 self.address = '127.0.0.1'
 
         self.multiple_ingest = multiple_ingest
+        self.random_ingest = random_ingest
+        self.stop_admin_ingest = stop_admin_ingest
         self.connect_timeout = connect_timeout
         self.timeout = timeout
         self.workflow = workflow
@@ -89,6 +94,7 @@ class OCHTTPClient(object):
         self.workflow_names = []
         self.ca_parameters = ca_parameters
         self.search_server = None
+        self.workflow_server = None
         self.polling_schedule = polling_long
         self.polling_state = polling_short
         # FIXME should be long? https://github.com/teltek/Galicaster/issues/114
@@ -276,6 +282,15 @@ class OCHTTPClient(object):
             self.search_server = str(service['host'])
         return self.search_server
 
+    def _get_workflow_server(self):
+        if not self.workflow_server:
+            service = self._get_endpoints(WORKFLOW_SERVICE_TYPE)
+            if not isinstance(service, dict):
+                self.workflow_server = str(service[0]['host'])
+            else:
+                self.workflow_server = str(service['host'])
+        return self.workflow_server
+
     def search_by_mp_id(self, mp_id):
         """ Returns search result from opencast """
         search_server = self._get_search_server()
@@ -283,6 +298,12 @@ class OCHTTPClient(object):
         search_result = json.loads(result)
         return search_result['search-results']
 
+    def search_by_mp_workflow_id(self, mp_id):
+        """ Returns result of workflow search for mediapackage workflow id """
+        workflow_server = self._get_workflow_server()
+        result = self.__call('GET', WORKFLOW_ENDPOINT, {'id': mp_id}, {}, {}, True, workflow_server, True)
+        search_result = json.loads(result)
+        return search_result
 
     def verify_ingest_server(self, server):
         """ if we have multiple ingest servers the get_ingest_server should never
@@ -293,55 +314,76 @@ class OCHTTPClient(object):
 
         p = '(?:http.*://)?(?P<host>[^:/ ]+).?(?P<port>[0-9]*).*'
         m = re.search(p,server['host'])
-        host=m.group('host')
+        host = m.group('host')
         m = re.search(p,self.server)
-        adminHost=m.group('host')
-        if (not server['online']):
+        adminHost = m.group('host')
+        if not server['online']:
             return False
-        if (server['maintenance']):
+        if server['maintenance']:
             return False
 
         try:
-            adminIP = socket.gethostbyname(adminHost);
-            hostIP  = socket.gethostbyname(host)
-            if (adminIP != hostIP):
+            admin_ip = socket.gethostbyname(adminHost)
+            host_ip = socket.gethostbyname(host)
+            if admin_ip != host_ip:
                 return True
             else:
                 if adminHost != host:
-                    self.logger and self.logger.info("Shared IP address ({}) between {} and {}, it will be used {}".format(adminIP, adminHost, host, server['host']))
+                    self.logger and self.logger.debug("Shared IP address ({}) between {} and {}, it will be used {}".format(admin_ip, adminHost, host, server['host']))
                     return True
         except Exception as exc:
             self.logger and self.logger.error("Problem on verifying the ingest server {} (on getting the IP of adminHost={} and host={}), exception {}".format(server['host'], adminHost, host, exc))
         return False
 
-
     def get_ingest_server(self):
-        """ get the ingest server information from the admin node:
+        """
+        Get the ingest server information from the admin node:
         if there are more than one ingest servers the first from the list will be used
-        as they are returned in order of their load, if there is only one returned this
-        will be the admin node, so we can use the information we already have """
+        as they are returned in order of their load. if there is only one ingest server
+        returned this will be the admin node.
+
+        :var self.random_ingest: will randomly select a valid ingest server from all available servers
+        :var self.stop_admin_ingest: may prohibit any ingesting to the admin server
+        :return: an ingest server string
+        """
         all_servers = self._get_endpoints(INGEST_SERVICE_TYPE)
         if type(all_servers) is list:
+            if self.random_ingest:
+                    attempt = 0
+                    while attempt < 10:
+                        result = random.choice(all_servers)
+                        if self.verify_ingest_server(result):
+                            return str(result['host'])
+                        attempt += 1
             for serv in all_servers:
                 if self.verify_ingest_server(serv):
                     return str(serv['host']) # Returns less loaded served
         if self.verify_ingest_server(all_servers):
             return str(all_servers['host']) # There's only one server
-        return None # it will use the admin server
 
+        if self.stop_admin_ingest:
+            raise ValueError("No valid ingest nodes are available")
+        return None  # it will use the admin server
+ 
     def ingest(self, mp_file, mp_id, workflow=None, workflow_instance=None, workflow_parameters=None):
         postdict = self._prepare_ingest(mp_file, workflow, workflow_instance, workflow_parameters)
-        server = self.server if not self.multiple_ingest else self.get_ingest_server()
+        if self.multiple_ingest:
+            ingest_server = self.get_ingest_server()
+            if ingest_server:
+                server = ingest_server
+            else:
+                server = self.server
+        else:
+            server = self.server
         if self.logger:
-            self.logger.info( 'Ingesting MP {} to Server {}'.format(mp_id, server) )
-        return self.__call('POST', INGEST_ENDPOINT, {}, {}, postdict.items(), False, server, False)
+            self.logger.info('Ingesting MP {} to Server {}'.format(mp_id, server))
 
+        return self.__call('POST', INGEST_ENDPOINT, {}, {}, postdict.items(), False, server, False)
 
     def getseries(self, **query):
         """ Get series according to the page count and offset provided"""
 
         return self.__call('GET', SERIES_ENDPOINT, query_params = query)
-
 
     def get_workflows(self, server=None):
         """ Get workflow names """
@@ -367,7 +409,6 @@ class OCHTTPClient(object):
                                               "title" : d["title"]})
 
         return workflows
-
 
     def find_between(self, s, first, last):
         try:

@@ -67,6 +67,7 @@ class OCService(object):
         self.logger     = logger
         self.recorder   = recorder
 
+        self.dispatcher.connect('init', self.init_client)
         self.dispatcher.connect('timer-short', self.do_timers_short)
         self.dispatcher.connect('timer-long',  self.do_timers_long)
         self.dispatcher.connect('recorder-started', self.__check_recording_started)
@@ -94,22 +95,26 @@ class OCService(object):
         except Exception as exc:
             self.logger.warning('Problems to connect to opencast server: {0}'.format(exc))
             self.__set_opencast_down()
+        self.jobs.put((self.set_state, ()))
 
 
     def __check_recording_started(self, element=None, mp_id=None):
-        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
-            self.t_stop = mp.getDuration()
-            self.scheduler.mp_rec = mp_id
+        try:
+            occap = mp.getOCCaptureAgentProperties()
+        except AttributeError:
+            occap = None
+        if mp and occap:
             self.jobs.put((self.__set_recording_state, (mp, 'capturing')))
 
 
     def __check_recording_stopped(self, element=None, mp_id=None):
-        #TODO: Improve the way of checking if it is a scheduled recording
         mp = self.repo.get(mp_id)
-        if mp and mp.getOCCaptureAgentProperty('capture.device.names'):
-            self.scheduler.mp_rec = None
+        try:
+            occap = mp.getOCCaptureAgentProperties()
+        except AttributeError:
+            occap = None
+        if mp and occap:
             self.__set_recording_state(mp, 'capture_finished')
 
 
@@ -150,9 +155,7 @@ class OCService(object):
         Notes:
             This method is invoked every short beat duration. (10 seconds by default)
         """
-        if self.net:
-            self.jobs.put((self.set_state, ()))
-        else:
+        if not self.net:
             self.jobs.put((self.init_client, ()))
 
 
@@ -173,9 +176,11 @@ class OCService(object):
         self.series = get_series()
 
 
-    def init_client(self):
+    def init_client(self, sender=None):
         """Tries to initialize opencast's client and set net's state.
         If it's unable to connecto to opencast server, logger prints ir properly and net is set True.
+        Args:
+            sender (Dispatcher): instance of the class in charge of emitting signals.
         """
         self.logger.info('Init opencast client')
         self.old_ca_status = None
@@ -183,11 +188,14 @@ class OCService(object):
         try:
             self.client.welcome()
             self.__set_opencast_up()
+            self.jobs.put((self.set_state, ()))
+            self.jobs.put((self.process_ical, ()))
             self.jobs.put((self.update_series,()))
             if self.conf.tracks_visible_to_opencast():
                 self.logger.info('Be careful using profiles and opencast scheduler')
         except Exception as exc:
             self.logger.warning('Unable to connect to opencast server: {0}'.format(exc))
+            self.jobs.put((self.process_ical_cached, ()))
             self.__set_opencast_down(True)
 
 
@@ -237,6 +245,17 @@ class OCService(object):
 
         self.dispatcher.emit('ical-processed')
 
+    def process_ical_cached(self):
+        self.logger.info('Process ical from cache')
+        cached_events = self.last_events
+        if not cached_events:
+            return
+
+        for event in cached_events:
+            self.logger.info('Creating MP with UID {0} from ical cache'.format(event['UID']))
+            ical.create_mp(self.repo, event)
+
+        self.dispatcher.emit('ical-processed')
 
     def on_recorder_error(self, origin=None, error_message=None):
         if not self.scheduler.mp_rec:

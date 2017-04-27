@@ -20,7 +20,7 @@ from galicaster.recorder.utils import get_videosink
 
 pipestr = (' v4l2src name=gc-v4l2-src ! capsfilter name=gc-v4l2-filter ! queue ! gc-v4l2-dec ! videobox name=gc-v4l2-videobox top=0 bottom=0 !'
            ' videorate ! videoconvert ! capsfilter name=gc-v4l2-vrate ! videocrop name=gc-v4l2-crop ! gc-videofilter ! '
-           ' tee name=gc-v4l2-tee ! queue ! caps-preview ! gc-vsink '
+           ' textoverlay name=gc-v4l2-text ! tee name=gc-v4l2-tee ! queue ! caps-preview ! gc-vsink '
            ' gc-v4l2-tee. ! queue ! valve drop=false name=gc-v4l2-valve ! videoconvert ! queue ! '
            ' gc-v4l2-enc ! queue ! gc-v4l2-mux ! '
            ' queue ! filesink name=gc-v4l2-sink async=false')
@@ -164,6 +164,15 @@ class GCv4l2(Gst.Bin, base.Base):
 
         self.set_option_in_pipeline('io-mode', 'gc-v4l2-src', 'io-mode')
 
+        if "textoverlay" in self.options:
+            text_ops = self.options["textoverlay"]
+            text_ops = dict(item.split("=") for item in text_ops.split(","))
+            text = self.get_by_name("gc-v4l2-text")
+            for opts, vals in text_ops.iteritems():
+                if opts == 'outline-color':
+                    text.set_property(opts, int(vals))
+                else:
+                    text.set_property(opts, vals)
 
         self.set_value_in_pipeline(path.join(self.options['path'], self.options['file']), 'gc-v4l2-sink', 'location')
 
