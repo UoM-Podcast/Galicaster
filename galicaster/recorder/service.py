@@ -327,6 +327,8 @@ class RecorderService(object):
     def _handle_init(self, origin):
         self.logger.debug("Init recorder service")
         self.preview()
+        self.logger.debug("reloading gstreamer pipeline")
+        self.dispatcher.emit('action-reload-profile')
 
 
     def _handle_reload_profile(self, origin):
