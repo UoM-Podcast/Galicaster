@@ -168,7 +168,6 @@ class OCService(object):
         """
         if self.net:
             self.jobs.put((self.process_ical,()))
-            self.jobs.put((self.update_series,()))
 
 
     def update_series(self):
