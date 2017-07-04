@@ -1,0 +1,99 @@
+/*BOXES*/
+#mainbox{
+    /* font: sans-serif 9px; */
+    font-weight: lighter;
+    /* color: black; */
+}
+#leftbox{
+    border-radius: 5px;
+    border-top: 1px solid lightgrey;
+    border-bottom: 1px solid lightgrey;
+    /* border-left: 1px solid lightgrey; */
+    border-right: 0.5px solid lightgrey;
+}
+#rightbox{
+    border-radius: 5px;
+    border-top: 1px solid lightgrey;
+    border-bottom: 1px solid lightgrey;
+    border-left: 0.5px solid lightgrey;
+    border-right: 1px solid lightgrey;
+}
+#title_box{
+    /* border-bottom: 1px solid lightgrey; */
+}
+/*leftbox*/
+#onoffbox{
+}
+#scales{
+    /* font: sans-serif 7px; */
+    font-weight: lighter;
+    /* color: black; */
+    border-bottom: 1px dashed lightgrey;
+}
+/*rightbox*/
+#controlpanel{
+    /* border: 1px dashed lightgrey; */
+    /* border-radius: 5px; */
+}
+#control{
+    border: 2px dotted lightgrey;
+    border-radius: 5px;
+}
+
+/*BUTTONS*/
+#titlebutton{
+    border-radius: 5px;
+	border: 1px solid shade(gray,1.5);
+}
+#controlbuttons{
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+}
+#panelbuttons{
+    border-radius: 5px;
+	border: 1px solid shade(gray,1.5);
+}
+#presetbuttons{
+    /* font: sans-serif 10px; */
+    font-weight: lighter;
+    color: grey;
+    border-radius: 5px;
+	border: 1px solid shade(gray,1.5);
+
+}
+#onoffbutton{
+    /* font-size: 9px; */
+    border-radius: 5px;
+}
+
+/*BUTTONEFFECTS*/
+#titlebutton:hover{
+    background: repeating-linear-gradient(ghostwhite, lightsalmon)
+}
+#onoffbutton:hover{
+}
+#controlbuttons:hover{
+    background: repeating-linear-gradient(ghostwhite,lightsalmon)
+}
+#panelbuttons:hover,
+#presetbuttons:hover{
+    background: repeating-linear-gradient(ghostwhite,lightsalmon)
+}
+#panelbuttons:checked,
+#presetbuttons:checked{
+    background: repeating-linear-gradient(slategray, ghostwhite);
+}
+
+
+/*LABELS*/
+#descr_label{
+    /* font-size: 7px; */
+    font-weight: lighter;
+}
+#title_label{
+    /* font-size: 9px; */
+    font-weight: lighter;
+}
+
+
