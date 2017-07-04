@@ -1,3 +1,19 @@
+"""Copyright (C) 2017  Robin Lachmann
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>."""
+
+
 import gi
 
 gi.require_version('Gtk', '3.0')
@@ -79,22 +95,15 @@ def init():
             port = config.get(PORT)
         cam = camera.AXIS_V5915()
         cam.connect(ip, port, username, password)
-
         # initiate the onvif user interface
         dispatcher.connect("init", init_onvif_ui)
-        dispatcher.connect("recorder-starting", onvif_interface.on_start_recording)
-        dispatcher.connect("recorder-stopped", onvif_interface.on_stop_recording)
-    
     elif backend == "visca":
         global pysca 
         import galicaster.utils.pysca as pysca
         # If port is not defined, a None value will make this method fail
         pysca.connect(config.get(PORT_KEY))
-        
         # initiate the visca user interface
         dispatcher.connect("init", init_visca_ui)
-        dispatcher.connect('recorder-starting', visca_interface.on_start_recording)
-        dispatcher.connect('recorder-stopped', visca_interface.on_stop_recording)
     else:
         logger.warn("WARNING: You have to choose a backend in the config file before starting Galicaster, otherwise the cameracontrol plugin does not work.")
         raise RuntimeError("No backend for the cameracontrol plugin defined.") 
@@ -106,6 +115,9 @@ def init_visca_ui(element):
     global recorder_ui, brightscale, movescale, zoomscale, presetbutton, flybutton, builder, onoffbutton, prefbutton, zoomlabel, movelabel, brightlabel, res
 
     visca = visca_interface()
+
+    dispatcher.connect('recorder-starting', visca.on_start_recording)
+    dispatcher.connect('recorder-stopped', visca.on_stop_recording)
 
     recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
 
@@ -141,17 +153,8 @@ def init_visca_ui(element):
     # add new settings tab to the notebook
     notebook = recorder_ui.get_object("data_panel")
     mainbox = builder.get_object("mainbox")
-    #  mainbox.show_all()
 
-    #  leftbox = builder.get_object("leftbox")
-    #  rightbox = builder.get_object("rightbox")
     notebook.append_page(mainbox, get_label("notebook"))
-    #  notebook.append_page(rightbox, label)
-    #  notebook.append_page(rightbox, label)
-
-
-
-
 
     # buttons
     # movement
@@ -273,6 +276,8 @@ def init_onvif_ui(element):
     global recorder_ui, movescale, zoomscale, presetlist, presetdelbutton, flybutton, builder, prefbutton, newpreset, movelabel, zoomlabel, res
 
     onvif = onvif_interface()
+    dispatcher.connect("recorder-starting", onvif.on_start_recording)
+    dispatcher.connect("recorder-stopped", onvif.on_stop_recording)
 
     recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
 
@@ -687,8 +692,11 @@ class visca_interface():
         mp = repo.get_next_mediapackage()
 
         if mp is not None:
-            properties = mp.getOCCaptureAgentProperties()
-            preset = int(properties['org.opencastproject.workflow.config.cameraPreset'])
+            try:
+                properties = mp.getOCCaptureAgentProperties()
+                preset = int(properties['org.opencastproject.workflow.config.cameraPreset'])
+            except Exception as e:
+                logger.warn("Error loading the preset from the OC properties! Error:", e)
 
         try:
             pysca.set_power_on(DEFAULT_DEVICE, True, )
@@ -968,8 +976,11 @@ class onvif_interface():
         mp = repo.get_next_mediapackage()
 
         if mp is not None:
-            properties = mp.getOCCaptureAgentProperties()
-            preset = properties['org.opencastproject.workflow.config.cameraPreset']
+                try:
+                    properties = mp.getOCCaptureAgentProperties()
+                    preset = properties['org.opencastproject.workflow.config.cameraPreset']
+                except Exception as e:
+                    logger.warn("Error loading a preset from the OC properties! Error:", e)
 
         try:
             presetlist.set_active_id(preset)
