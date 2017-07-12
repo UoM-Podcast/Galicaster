@@ -94,7 +94,7 @@ def init():
         else:
             port = config.get(PORT)
         cam = camera.AXIS_V5915()
-        cam.connect(ip, port, username, password)
+        # cam.connect(ip, port, username, password)
         # initiate the onvif user interface
         dispatcher.connect("init", init_onvif_ui)
     elif backend == "visca":
@@ -294,18 +294,18 @@ def init_onvif_ui(element):
 
     # load glade file
     builder = Gtk.Builder()
-    builder.add_from_file(get_ui_path("camctrl-onvif.glade"))
+    builder.add_from_file(get_ui_path("camctrl-onvif-new.glade"))
 
     # calculate resolution for scaling
     window_size = context.get_mainwindow().get_size()
     res = window_size[0]/1920.0
 
     # scale images
-    imgs = ["ctrl", "zoom", "dummy"]
+    imgs = ["ctrl", "zoom"]
     for i in imgs:
         get_stock_icon(i)
     # scale label
-    labels = ["control", "settings"]
+    labels = []
     for i in labels:
         get_label(i)
 
@@ -374,26 +374,26 @@ def init_onvif_ui(element):
     button.add(get_stock_icon("zoomout"))
     button.connect("pressed", onvif.zoom_out)
     button.connect("released", onvif.stop_move)
-
-    # presets
-    presetlist = builder.get_object("preset_list")
-    # add home position to list
-    presetlist.insert(0, "home", "home")
-    # fill the list with current presets
-    for preset in cam.get_presets():
-        presetlist.append(preset.Name, preset.Name)
-    presetlist.connect("changed", onvif.change_preset)
-
-    # to set a new preset
-    newpreset = builder.get_object("newpreset")
-    newpreset.connect("activate", onvif.save_preset)
-    newpreset.connect("icon-press", onvif.save_preset_icon)
-
-
-    # to delete a preset
-    presetdelbutton = builder.get_object("presetdel")
-    presetdelbutton.add(get_stock_icon("presetdel"))
-    presetdelbutton.connect("clicked", onvif.empty_entry)
+    #REMOVED
+    # # presets
+    # presetlist = builder.get_object("preset_list")
+    # # add home position to list
+    # presetlist.insert(0, "home", "home")
+    # # fill the list with current presets
+    # for preset in cam.get_presets():
+    #     presetlist.append(preset.Name, preset.Name)
+    # presetlist.connect("changed", onvif.change_preset)
+    #
+    # # to set a new preset
+    # newpreset = builder.get_object("newpreset")
+    # newpreset.connect("activate", onvif.save_preset)
+    # newpreset.connect("icon-press", onvif.save_preset_icon)
+    #
+    #
+    # # to delete a preset
+    # presetdelbutton = builder.get_object("presetdel")
+    # presetdelbutton.add(get_stock_icon("presetdel"))
+    # presetdelbutton.connect("clicked", onvif.empty_entry)
 
     # fly-mode for camera-movement
     flybutton = builder.get_object("fly")
@@ -404,11 +404,11 @@ def init_onvif_ui(element):
     button = builder.get_object("reset")
     button.add(get_stock_icon("reset"))
     button.connect("clicked", onvif.reset)
-
-    # show/hide preferences
-    prefbutton = builder.get_object("pref")
-    prefbutton.add(get_stock_icon("settings"))
-    prefbutton.connect("clicked", onvif.show_pref)
+# REMOVED
+    # # show/hide preferences
+    # prefbutton = builder.get_object("pref")
+    # prefbutton.add(get_stock_icon("settings"))
+    # prefbutton.connect("clicked", onvif.show_pref)
 
     movescale = builder.get_object("movescale")
     movelabel = get_label("move")
