@@ -502,6 +502,6 @@ def set_series(mp, logger=None):
                 xml.appendChild(created)
             except KeyError:
                 if logger:
-                    logger.debug("KeyError in serializer.set_series")
+                    logger.warning("KeyError in serializer.set_series")
                 continue
     return doc.toprettyxml(indent="   ", newl="\n", encoding="utf-8") #without encoding

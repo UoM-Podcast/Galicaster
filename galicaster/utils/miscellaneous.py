@@ -11,10 +11,15 @@
 # or send a letter to Creative Commons, 171 Second Street, Suite 300,
 # San Francisco, California, 94105, USA.
 
+import datetime
+
+import os
+import os.path
+import traceback
+
 from gi.repository import Gdk
 from galicaster import __version__
 from galicaster.core import context
-import datetime
 
 conf = context.get_conf()
 
@@ -36,3 +41,20 @@ def round_microseconds(date):
     if not rounded < 1:
         date = date + datetime.timedelta(seconds=1)
     return datetime.datetime(date.year, date.month, date.day, date.hour, date.minute, date.second)
+
+def get_timezone():
+    tzname = os.environ.get('TZ')
+    if tzname:
+        pass
+    elif os.path.exists('/etc/timezone'):
+        tzname = open('/etc/timezone').read().rstrip()
+
+    return tzname
+
+def count_files(folder):
+    try:
+        path, dirs, files = os.walk(folder).next()
+        return len(files)
+    except Exception as exc:
+        print traceback.format_exc()
+        print exc

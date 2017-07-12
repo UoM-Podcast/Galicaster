@@ -29,7 +29,7 @@ def get_events_from_string_ical(ical_data, limit=0):
     if limit > 0:
         events = cal.walk('vevent')[count:limit + count]
         for event in events:
-            if event['DTSTART'].dt.replace(tzinfo=None) < datetime.utcnow():
+            if event['DTEND'].dt.replace(tzinfo=None) < datetime.utcnow():
                 count += 1
         count -= 1
         if count > 0:
@@ -169,7 +169,7 @@ def handle_ical(ical_data, last_events, repo, scheduler, logger):
 
         for event in events:
             if not repo.get(event['UID']):
-                logger and logger.debug('Creating MP with UID {0} from ical'.format(event['UID']))
+                logger and logger.info('Creating MP with UID {0} from ical'.format(event['UID']))
                 create_mp(repo, event)
 
         if last_events:
