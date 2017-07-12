@@ -44,15 +44,15 @@ def init_ls_ui(element):
     recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
 
     # load css file
-    css = Gtk.CssProvider()
-    css.load_from_path(get_ui_path("camctrl.css"))
-
-    Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default())
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(),
-        css,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
+    # css = Gtk.CssProvider()
+    # css.load_from_path(get_ui_path("livestream.css"))
+    #
+    # Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default())
+    # Gtk.StyleContext.add_provider_for_screen(
+    #     Gdk.Screen.get_default(),
+    #     css,
+    #     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    # )
 
     # load glade file
     builder = Gtk.Builder()
@@ -86,6 +86,7 @@ def init_ls_ui(element):
     prefbutton.connect("toggled", DoingThings().on_button_toggled)
     # prefbutton.set_active(True)
 
+
 class DoingThings():
     def __init__(self):
         self.megas = None
@@ -95,8 +96,18 @@ class DoingThings():
     def on_button_toggled(self, button):
 
         if button.get_active():
+            slamm = builder.get_object("box2")
+            slamm.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(255, 0, 0, 1))
+            setts = builder.get_object("settings_label")
+            setts.set_markup('<b>Livestream: ON AIR</b>')
+            # setts.set_name('red_coloured')
             self.megas = self.output_1()
         else:
+            slamm = builder.get_object("box2")
+            slamm.override_background_color(Gtk.StateType.NORMAL)
+            setts = builder.get_object("settings_label")
+            setts.set_text('Livestream Stopped')
+            # setts.set_name('black_coloured')
             self.megas.get().terminate()
 
 
