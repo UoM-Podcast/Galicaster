@@ -171,7 +171,7 @@ class OCService(object):
 
 
     def update_series(self):
-        self.logger.debug('Updating series from server')
+        self.logger.info('Updating series from server')
         self.series = get_series()
 
 
@@ -257,14 +257,12 @@ class OCService(object):
         self.dispatcher.emit('ical-processed')
 
     def on_recorder_error(self, origin=None, error_message=None):
-        current_mp_id = self.recorder.current_mediapackage
-        if not current_mp_id:
+        if not self.scheduler.mp_rec:
             return
-
-        mp = self.repo.get(current_mp_id)
+        mp = self.repo.get(self.scheduler.mp_rec)
 
         if mp and not mp.manual:
-            now_is_recording_time = mp.getDate() < datetime.datetime.utcnow() and mp.getDate() + datetime.timedelta(seconds=(mp.getDuration()/1000)) > datetime.datetime.utcnow()
-
+            now_is_recording_time = (mp.getDate() < datetime.datetime.utcnow() and mp.getDate() + datetime.timedelta(seconds=(self.t_stop/1000)) > datetime.datetime.utcnow()) or (mp.getDate() - datetime.timedelta(seconds=20) < datetime.datetime.utcnow())
             if now_is_recording_time:
+                self.scheduler.mp_rec = None
                 self.__set_recording_state(mp, 'capture_error')

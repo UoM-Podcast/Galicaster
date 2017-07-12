@@ -23,6 +23,8 @@ import uuid
 import re
 import time
 import os
+from dateutil import tz
+from dateutil import parser
 from os import path
 from datetime import datetime
 from xml.dom import minidom
@@ -1505,9 +1507,9 @@ class Mediapackage(object):
         # Parse temporal metadatum
         if self.metadata_episode.has_key('temporal') and self.metadata_episode['temporal'] and not self.hasTracks():
             try:
-                g = re.search('start=(.*)Z; end=(.*)Z;', self.metadata_episode['temporal'])
-                start = datetime.strptime(g.group(1), "%Y-%m-%dT%H:%M:%S")
-                stop =  datetime.strptime(g.group(2), "%Y-%m-%dT%H:%M:%S")
+                g = re.search('start=(.*); end=(.*); ', self.metadata_episode['temporal'])
+                start = parser.parse(g.group(1)).astimezone(tz.tzutc()).replace(tzinfo=None)
+                stop = parser.parse(g.group(2)).astimezone(tz.tzutc()).replace(tzinfo=None)
                 diff = stop - start
                 self.setDuration(diff.seconds*1000)
                 self.setDate(start)
@@ -1571,7 +1573,7 @@ class Mediapackage(object):
             prop (str): the name of the property.
             value (str): the new value of the property name.
         """
-        if not prop or not value:
+        if not prop or value is None:
             return None
         else:
             self.properties[prop] = value
