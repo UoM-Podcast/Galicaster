@@ -6,9 +6,9 @@
 # Copyright (c) 2016, Teltek Video Research <galicaster@teltek.es>
 #
 # This work is licensed under the Creative Commons Attribution-
-# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of 
-# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ 
-# or send a letter to Creative Commons, 171 Second Street, Suite 300, 
+# NonCommercial-ShareAlike 3.0 Unported License. To view a copy of
+# this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/
+# or send a letter to Creative Commons, 171 Second Street, Suite 300,
 # San Francisco, California, 94105, USA.
 
 import re
@@ -21,6 +21,7 @@ from collections import OrderedDict
 import urlparse
 import urllib
 import random
+from galicaster.utils.miscellaneous import get_timezone
 
 try:
     from galicaster import __version__ as version
@@ -98,7 +99,7 @@ class OCHTTPClient(object):
         self.polling_state = polling_short
         # FIXME should be long? https://github.com/teltek/Galicaster/issues/114
         self.polling_caps = polling_short
-        self.polling_config = polling_long        
+        self.polling_config = polling_long
         self.response = {'Status-Code': '', 'Content-Type': '', 'ETag': ''}
         self.ical_etag = -1
 
@@ -117,12 +118,12 @@ class OCHTTPClient(object):
 
         c.setopt(pycurl.FOLLOWLOCATION, False)
         c.setopt(pycurl.CONNECTTIMEOUT, self.connect_timeout)
-        if timeout: 
+        if timeout:
             c.setopt(pycurl.TIMEOUT, self.timeout)
         c.setopt(pycurl.NOSIGNAL, 1)
         c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_DIGEST)
         c.setopt(pycurl.USERPWD, self.user + ':' + self.password)
-        sendheaders = ['X-Requested-Auth: Digest', 'X-Matterhorn-Opencast-Authorization: true']
+        sendheaders = ['X-Requested-Auth: Digest', 'X-Opencast-Matterhorn-Authorization: true']
         if headers:
             for h, v in headers.iteritems():
                 sendheaders.append('{}: {}'.format(h, v))
@@ -131,10 +132,10 @@ class OCHTTPClient(object):
         c.setopt(pycurl.HTTPHEADER, sendheaders)
         c.setopt(pycurl.USERAGENT, 'Galicaster' + version)
         c.setopt(pycurl.SSL_VERIFYPEER, False) # equivalent to curl's --insecure
-       
+
         if (method == 'POST'):
             if urlencode:
-                c.setopt(pycurl.POST, 1) 
+                c.setopt(pycurl.POST, 1)
                 c.setopt(pycurl.POSTFIELDS, urllib.urlencode(postfield))
             else:
                 c.setopt(pycurl.HTTPPOST, postfield)
@@ -152,10 +153,10 @@ class OCHTTPClient(object):
         c.close()
         if status_code != 200 and status_code != 302 and status_code != 304:
             if (status_code > 200) and (status_code < 300):
-                self.logger and self.logger.debug("Opencast client ({}) sent a response with status code {}".format(urlparse.urlunparse(url), status_code))
+                self.logger and self.logger.warning("Opencast client ({}) sent a response with status code {}".format(urlparse.urlunparse(url), status_code))
             else:
                 title = self.find_between(b.getvalue(), "<title>", "</title>")
-                self.logger and self.logger.error('call error in %s, status code {%r}: %s', 
+                self.logger and self.logger.error('call error in %s, status code {%r}: %s',
                                                   urlparse.urlunparse(url), status_code, title)
                 raise IOError, 'Error in Opencast client'
 
@@ -198,7 +199,7 @@ class OCHTTPClient(object):
 
     def setrecordingstate(self, recording_id, state):
         """
-        Los posibles estados son: unknown, capturing, capture_finished, capture_error, manifest, 
+        Los posibles estados son: unknown, capturing, capture_finished, capture_error, manifest,
         manifest_error, manifest_finished, compressing, compressing_error, uploading, upload_finished, upload_error
         """
         return self.__call('POST', SETRECORDINGSTATE_ENDPOINT, {'id': recording_id}, postfield={'state': state})
@@ -236,9 +237,10 @@ class OCHTTPClient(object):
             'capture.error.subject': '&quot;%hostname capture agent started at %date&quot;',
             'org.opencastproject.server.url': 'http://172.20.209.88:8080',
             'org.opencastproject.capture.core.url': self.server,
-            'capture.max.length': '28800'
+            'capture.max.length': '28800',
+            'capture.device.timezone': get_timezone()
             }
-        
+
         if self.repo:
             client_conf['capture.cleaner.mindiskspace'] = self.repo.get_free_space()
 
@@ -269,7 +271,7 @@ class OCHTTPClient(object):
 
     def _get_endpoints(self, service_type):
         if self.logger:
-            self.logger.debug('Looking up Opencast endpoint for %s', service_type)
+            self.logger.info('Looking up Opencast endpoint for %s', service_type)
         services = self.__call('GET', SERVICE_REGISTRY_ENDPOINT, {}, {'serviceType': service_type})
         services = json.loads(services)
         return services['services']['service']
@@ -319,7 +321,7 @@ class OCHTTPClient(object):
             return False
         if server['maintenance']:
             return False
-        
+
         try:
             admin_ip = socket.gethostbyname(adminHost)
             host_ip = socket.gethostbyname(host)
@@ -327,7 +329,7 @@ class OCHTTPClient(object):
                 return True
             else:
                 if adminHost != host:
-                    self.logger and self.logger.debug("Shared IP address ({}) between {} and {}, it will be used {}".format(admin_ip, adminHost, host, server['host']))
+                    self.logger and self.logger.info("Shared IP address ({}) between {} and {}, it will be used {}".format(adminIP, adminHost, host, server['host']))
                     return True
         except Exception as exc:
             self.logger and self.logger.error("Problem on verifying the ingest server {} (on getting the IP of adminHost={} and host={}), exception {}".format(server['host'], adminHost, host, exc))
@@ -361,7 +363,6 @@ class OCHTTPClient(object):
         if self.stop_admin_ingest:
             raise ValueError("No valid ingest nodes are available")
         return None  # it will use the admin server
- 
     def ingest(self, mp_file, mp_id, workflow=None, workflow_instance=None, workflow_parameters=None):
         postdict = self._prepare_ingest(mp_file, workflow, workflow_instance, workflow_parameters)
         if self.multiple_ingest:
@@ -373,13 +374,14 @@ class OCHTTPClient(object):
         else:
             server = self.server
         if self.logger:
-            self.logger.info('Ingesting MP {} to Server {}'.format(mp_id, server))
+            self.logger.info( 'Ingesting MP {} to Server {}'.format(mp_id, server) )
         return self.__call('POST', INGEST_ENDPOINT, {}, {}, postdict.items(), False, server, False)
 
     def getseries(self, **query):
         """ Get series according to the page count and offset provided"""
 
         return self.__call('GET', SERIES_ENDPOINT, query_params = query)
+
 
     def get_workflows(self, server=None):
         """ Get workflow names """
@@ -388,7 +390,7 @@ class OCHTTPClient(object):
         workflows = []
 
         if self.logger:
-            self.logger.info( 'Getting workflow names for {}'.format(theServer) ) 
+            self.logger.info( 'Getting workflow names for {}'.format(theServer) )
 
         # Get Workflow definitions
         definitions = self.__call('GET', WORKFLOWS_ENDPOINT)
@@ -403,7 +405,7 @@ class OCHTTPClient(object):
                         if any(x in validworkflows for x in d["tags"]["tag"]):
                             workflows.append({"id"    : d["id"],
                                               "title" : d["title"]})
-                    
+
         return workflows
 
     def find_between(self, s, first, last):

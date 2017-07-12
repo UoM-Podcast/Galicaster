@@ -26,6 +26,8 @@ logger = context.get_logger()
 GST_TIMEOUT= Gst.SECOND*10
 
 class Recorder(object):
+    def __del__(self):
+        self.bus.remove_signal_watch()
 
     def __init__(self, bins, players={}):
         """
@@ -140,11 +142,14 @@ class Recorder(object):
 
     def preview(self):
         logger.debug("recorder preview")
-        self.__set_state(Gst.State.PAUSED)
         for bin in self.bins.values():
             bin.changeValve(True)
         self.__valves_status = True
         self.__set_state(Gst.State.PLAYING)
+        Gst.debug_bin_to_dot_file_with_ts(self.pipeline,
+                                          Gst.DebugGraphDetails.ALL,
+                                          'galicaster-pipeline')
+
 
 
     def preview_and_record(self):
@@ -244,11 +249,16 @@ class Recorder(object):
             for bin_name, bin in self.bins.iteritems():
                 bin.send_event_to_src(event)
 
-            msg = self.bus.timed_pop_filtered(GST_TIMEOUT, Gst.MessageType.EOS)
+            msg = self.bus.timed_pop_filtered(GST_TIMEOUT, Gst.MessageType.ERROR | Gst.MessageType.EOS)
             if not msg:
                 self.__emit_error('Timeout trying to receive EOS message', '', stop=False)
-            else:
+            elif msg.type == Gst.MessageType.EOS:
                 logger.debug('EOS message successfully received')
+            elif msg.type == Gst.MessageType.ERROR:
+                err, debug = msg.parse_error()
+                logger.error("Error received from element {}: {}".format(msg.sr.get_name(), err))
+                logger.debug("Debugging information: {}".format(debug))
+                self.__emit_error('Received ERROR message from pipeline', '', stop=False)
 
         self.pipeline.set_state(Gst.State.NULL)
 
@@ -361,7 +371,7 @@ class Recorder(object):
                     bin.disable_preview()
                     self.mute_status["preview"][bin_nam] = False
         except Exception as exc:
-            logger.debug(exc)
+            logger.error(exc)
 
 
     def enable_preview(self, bin_names=[]):
@@ -378,7 +388,7 @@ class Recorder(object):
                     bin.enable_preview()
                     self.mute_status["preview"][bin_nam] = True
         except Exception as exc:
-            logger.debug(exc)
+            logger.error(exc)
 
     def set_drawing_areas(self, players):
         self.players = players

@@ -15,6 +15,7 @@ from gi.repository import Gtk, Gdk, GdkPixbuf
 from gi.repository import GObject
 from galicaster.classui import get_image_path, get_ui_path
 from galicaster.classui.elements.message_header import Header
+from galicaster.recorder.service import ERROR_STATUS
 
 from galicaster.utils.i18n import _
 from galicaster.core import context
@@ -72,7 +73,7 @@ class PopUp(Gtk.Widget):
 
     def __init__(self, message=None, text=TEXT, parent=None,
                  buttons=None, response_action=None, close_on_response=True,
-                 show=[], close_parent = False):
+                 show=[], close_parent = False, close_before_response_action = False):
         """ Initializes the Gtk.Dialog from its GLADE
         Args:
             message (str): type of message (See above constants)
@@ -94,6 +95,7 @@ class PopUp(Gtk.Widget):
         size = parent.get_size()
         self.response_action = response_action
         self.close_on_response = close_on_response
+        self.close_before_response_action =  close_before_response_action
         self.message = message
         self.close_parent = close_parent
         self.size = size
@@ -364,6 +366,9 @@ class PopUp(Gtk.Widget):
                         new_widget.set_property('halign', widget.get_property('halign'))
                         new_widget.set_property('valign', widget.get_property('valign'))
                         new_widget.connect("clicked", self.send_start, content)
+                        recorder = context.get_recorder()
+                        if recorder.status == ERROR_STATUS:
+                            new_widget.set_sensitive(False)
                     widget_classes = widget.get_style_context().list_classes()
                     for style_class in widget_classes:
                         widget_style_context = new_widget.get_style_context()
@@ -426,9 +431,15 @@ class PopUp(Gtk.Widget):
 
     def on_dialog_response(self, origin, response_id):
         if response_id not in NEGATIVE and self.response_action:
-            self.response_action(response_id, builder=self.gui, popup=self)
             if self.close_on_response:
-                self.dialog_destroy()
+                if self.close_before_response_action:
+                    self.dialog_destroy()
+                    self.response_action(response_id, builder=self.gui, popup=self)
+                else:
+                    self.response_action(response_id, builder=self.gui, popup=self)
+                    self.dialog_destroy()
+            else:
+                self.response_action(response_id, builder=self.gui, popup=self)
         else:
             self.dialog_destroy()
             if self.close_parent:
@@ -442,6 +453,7 @@ class PopUp(Gtk.Widget):
             self.dialog.destroy()
             self.dialog = None
         instance = None
+
         self.dispatcher.emit("action-audio-enable-msg")
 
 GObject.type_register(PopUp)
