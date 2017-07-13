@@ -777,7 +777,8 @@ class onvif_interface():
 
     def move_home(self, button):
         logger.debug("I move home")
-        presetlist.set_active_id("home")
+        cam.go_home()
+        # presetlist.set_active_id("home")
 
 
     # zoom functions
