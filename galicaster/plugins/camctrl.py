@@ -94,7 +94,7 @@ def init():
         else:
             port = config.get(PORT)
         cam = camera.AXIS_V5915()
-        # cam.connect(ip, port, username, password)
+        cam.connect(ip, port, username, password)
         # initiate the onvif user interface
         dispatcher.connect("init", init_onvif_ui)
     elif backend == "visca":
@@ -282,15 +282,15 @@ def init_onvif_ui(element):
     recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
 
     # load css file
-    css = Gtk.CssProvider()
-    css.load_from_path(get_ui_path("camctrl.css"))
-
-    Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default())
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(),
-        css,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
+    # css = Gtk.CssProvider()
+    # css.load_from_path(get_ui_path("camctrl.css"))
+    #
+    # Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default())
+    # Gtk.StyleContext.add_provider_for_screen(
+    #     Gdk.Screen.get_default(),
+    #     css,
+    #     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    # )
 
     # load glade file
     builder = Gtk.Builder()
@@ -394,16 +394,16 @@ def init_onvif_ui(element):
     # presetdelbutton = builder.get_object("presetdel")
     # presetdelbutton.add(get_stock_icon("presetdel"))
     # presetdelbutton.connect("clicked", onvif.empty_entry)
-
-    # fly-mode for camera-movement
-    flybutton = builder.get_object("fly")
-    flybutton.add(get_stock_icon("fly"))
-    flybutton.connect("clicked", onvif.fly_mode)
-
-    # reset all settings
-    button = builder.get_object("reset")
-    button.add(get_stock_icon("reset"))
-    button.connect("clicked", onvif.reset)
+# REMOVED
+    # # fly-mode for camera-movement
+    # flybutton = builder.get_object("fly")
+    # flybutton.add(get_stock_icon("fly"))
+    # flybutton.connect("clicked", onvif.fly_mode)
+    #
+    # # reset all settings
+    # button = builder.get_object("reset")
+    # button.add(get_stock_icon("reset"))
+    # button.connect("clicked", onvif.reset)
 # REMOVED
     # # show/hide preferences
     # prefbutton = builder.get_object("pref")
@@ -1010,6 +1010,8 @@ def get_icon(imgname):
 def get_stock_icon(imgname):
     size = res * 28
     if imgname == "stop":
+        size = res * 56
+    if imgname == "zoomin":
         size = res * 56
     img = builder.get_object(imgname+"img")
     img.set_pixel_size(size)
