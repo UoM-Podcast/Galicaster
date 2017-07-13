@@ -148,18 +148,19 @@ def get_label(labelname):
     label = builder.get_object(labelname+"_label")
     size = res * 18
     if labelname == "settings" \
-       or labelname == "control":
+       or labelname == "control" \
+       or labelname == "livestream":
         size = res * 20
     elif labelname == "notebook":
         size = res * 20
-        # label.set_property("ypad",10)
-        #  label.set_property("xpad",5)
-        #  label.set_property("vexpand-set",True)
-        #  label.set_property("vexpand",True)
+        label.set_property("ypad",10)
+        # label.set_property("xpad",5)
+        # label.set_property("vexpand-set",True)
+        # label.set_property("vexpand",True)
     elif labelname == "bright" or \
             labelname == "move" or \
             labelname == "zoom":
         size = res * 14
-    # label.set_use_markup(True)
-    # label.modify_font(Pango.FontDescription(str(size)))
+    label.set_use_markup(True)
+    label.modify_font(Pango.FontDescription(str(size)))
     return label
