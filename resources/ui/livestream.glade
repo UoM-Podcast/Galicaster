@@ -11,7 +11,7 @@
   <object class="GtkLabel" id="notebook_label">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="ypad">12</property>
+    <property name="ypad">15</property>
     <property name="label" translatable="yes">Livestream</property>
     <property name="xalign">0.20000000298023224</property>
   </object>
