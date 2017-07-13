@@ -96,15 +96,21 @@ class DoingThings():
     def on_button_toggled(self, button):
 
         if button.get_active():
+            # Make an obvious notification in UI when livestreaming
             slamm = builder.get_object("box2")
             slamm.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(255, 0, 0, 1))
+            sidenote = get_label("notebook")
+            sidenote.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(255, 0, 0, 1))
             setts = builder.get_object("settings_label")
             setts.set_markup('<b>Livestream: ON AIR</b>')
             # setts.set_name('red_coloured')
             self.megas = self.output_1()
         else:
+            # return UI to normal
             slamm = builder.get_object("box2")
+            sidenote = get_label("notebook")
             slamm.override_background_color(Gtk.StateType.NORMAL)
+            sidenote.override_background_color(Gtk.StateType.NORMAL)
             setts = builder.get_object("settings_label")
             setts.set_text('Livestream Stopped')
             # setts.set_name('black_coloured')
