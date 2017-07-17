@@ -91,16 +91,16 @@ def init():
         ip = config.get(IPADDRESS)
         username = config.get(USERNAME)
         password = config.get(PASSWORD)
+        # Initiate axis web UI
+        web_username = config.get('web_username')
+        web_password = config.get('web_password')
+        axis_http = axis_web.AxisWeb(ip, web_username, web_password)
         if config.get(PORT) is None:
             port = DEFAULT_PORT
         else:
             port = config.get(PORT)
         cam = camera.AXIS_V5915()
         cam.connect(ip, port, username, password)
-        # Initiate axis web UI
-        web_username = config.get('web_username')
-        web_password = config.get('web_password')
-        axis_http = axis_web.AxisWeb(ip, web_username, web_password)
         # initiate the onvif user interface
         dispatcher.connect("init", init_onvif_ui)
     elif backend == "visca":

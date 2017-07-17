@@ -12,6 +12,8 @@ class AxisWeb(object):
         self.led_state = "off"
         # On init, make sure LED is off
         self.tallyled(False)
+        # Make sure the time is set to PC
+        self.settime("PC")
 
     def sendcommand(self, fullurl, data):
         headers = {'X-Requested-Auth': 'Digest'}
@@ -30,5 +32,12 @@ class AxisWeb(object):
             self.led_state = "off"
         url = 'http://' + self.cam_hostname + '/sm/sm.srv'
         postfield = {"root_TallyLED_Usage": self.led_state, "return_page": "/admin/config.shtml?menu=&submenu=&group=TallyLED", "action": "modify"}
+        snd_cmd = self.sendcommand(url, postfield)
+        return snd_cmd.status_code
+
+    def settime(self, version="PC"):
+        url = 'http://' + self.cam_hostname + '/sm/sm.srv'
+        postfield = {"root_Time_SyncSource": version,
+                     "return_page": "/admin/config.shtml?menu=&submenu=&group=Time", "action": "modify"}
         snd_cmd = self.sendcommand(url, postfield)
         return snd_cmd.status_code
