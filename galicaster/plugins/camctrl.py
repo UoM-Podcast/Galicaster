@@ -84,7 +84,9 @@ def init():
 
     if backend == "onvif":
         global cam
+        global axis_http
         import galicaster.utils.camctrl_onvif_interface as camera
+        import galicaster.utils.camctrl_http_interface as axis_web
         # connect to the camera
         ip = config.get(IPADDRESS)
         username = config.get(USERNAME)
@@ -95,6 +97,10 @@ def init():
             port = config.get(PORT)
         cam = camera.AXIS_V5915()
         cam.connect(ip, port, username, password)
+        # Initiate axis web UI
+        web_username = config.get('web_username')
+        web_password = config.get('web_password')
+        axis_http = axis_web.AxisWeb(ip, web_username, web_password)
         # initiate the onvif user interface
         dispatcher.connect("init", init_onvif_ui)
     elif backend == "visca":
@@ -975,7 +981,7 @@ class onvif_interface():
 
         preset = config.get(RECORD_PRESET_KEY, DEFAULT_RECORD_PRESET)
         mp = repo.get_next_mediapackage()
-
+        axis_http.tallyled(True)
         if mp is not None:
                 try:
                     properties = mp.getOCCaptureAgentProperties()
@@ -992,7 +998,7 @@ class onvif_interface():
 
 
     def on_stop_recording(self, elem, elem2):
-
+        axis_http.tallyled(False)
         try:
             presetlist.set_active_id(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET))
             #  cam.goToPreset(cam.identifyPreset(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET)))
