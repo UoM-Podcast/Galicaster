@@ -279,7 +279,7 @@ def init_visca_ui(element):
 
 # ONVIF USER INTERFACE
 def init_onvif_ui(element):
-    global recorder_ui, movescale, zoomscale, presetlist, presetdelbutton, flybutton, builder, prefbutton, newpreset, movelabel, zoomlabel, res
+    global recorder_ui, movescale, zoomscale, presetdelbutton, flybutton, builder, prefbutton, newpreset, movelabel, zoomlabel, res
 
     onvif = onvif_interface()
     dispatcher.connect("recorder-starting", onvif.on_start_recording)
@@ -382,13 +382,13 @@ def init_onvif_ui(element):
     button.connect("released", onvif.stop_move)
     #REMOVED
     # # presets
-    # presetlist = builder.get_object("preset_list")
+    # # presetlist = builder.get_object("preset_list")
     # # add home position to list
-    # presetlist.insert(0, "home", "home")
+    # # presetlist.insert(0, "home", "home")
     # # fill the list with current presets
     # for preset in cam.get_presets():
-    #     presetlist.append(preset.Name, preset.Name)
-    # presetlist.connect("changed", onvif.change_preset)
+    #     # presetlist.append(preset.Name, preset.Name)
+    # # presetlist.connect("changed", onvif.change_preset)
     #
     # # to set a new preset
     # newpreset = builder.get_object("newpreset")
@@ -731,49 +731,49 @@ class onvif_interface():
     def move_left(self, button):
         logger.debug("I move left")
         cam.go_left(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_leftup(self, button):
         logger.debug("I move leftup")
         cam.go_left_up(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_leftdown(self, button):
         logger.debug("I move leftdown")
         cam.go_left_down(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_right(self, button):
         logger.debug("I move right")
         cam.go_right(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_rightup(self, button):
         logger.debug("I move rightup")
         cam.go_right_up(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_rightdown(self, button):
         logger.debug("I move rightdown")
         cam.go_right_down(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_up(self, button):
         logger.debug("I move up")
         cam.go_up(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def move_down(self, button):
         logger.debug("I move down")
         cam.go_down(float("{0:.1f}".format(movescale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def stop_move(self, button):
@@ -784,73 +784,75 @@ class onvif_interface():
     def move_home(self, button):
         logger.debug("I move home")
         cam.go_home()
-        # presetlist.set_active_id("home")
+        # # presetlist.set_active_id("home")
 
 
     # zoom functions
     def zoom_in(self, button):
         logger.debug("zoom in")
         cam.zoom_in(float("{0:.1f}".format(zoomscale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     def zoom_out(self, button):
         logger.debug("zoom out")
         cam.zoom_out(float("{0:.1f}".format(zoomscale.get_value())))
-        presetlist.set_active(-1)
+        # presetlist.set_active(-1)
 
 
     # preset functions
-    def change_preset(self, presetlist):
-        if len(newpreset.get_text()) > 0:
-            if newpreset.get_text() == "home":
-                logger.debug("New Home set to current position.")
-            else:
-                logger.debug("New Preset saved: %s", newpreset.get_text())
-        elif presetlist.get_active_text() == "home":
-            logger.debug("Going Home")
-            cam.go_home()
-        else:
-            if presetdelbutton.get_active() and not presetlist.get_active_text() is None:
-                cam.remove_preset(cam.identify_preset(presetlist.get_active_text()))
-                presetdelbutton.set_active(False)
-                presetlist.remove(presetlist.get_active())
-                
-            else:
-                if not presetlist.get_active_text() is None:
-                    logger.debug("Going to: " + presetlist.get_active_text())
-                    cam.go_to_preset(cam.identify_preset(presetlist.get_active_text()))
+    # def change_preset(self, # presetlist):
+    #     if len(newpreset.get_text()) > 0:
+    #         if newpreset.get_text() == "home":
+    #             logger.debug("New Home set to current position.")
+    #         else:
+    #             logger.debug("New Preset saved: %s", newpreset.get_text())
+    #     elif # presetlist.get_active_text() == "home":
+    #         logger.debug("Going Home")
+    #         cam.go_home()
+    #     else:
+    #         if presetdelbutton.get_active() and not # presetlist.get_active_text() is None:
+    #             cam.remove_preset(cam.identify_preset(# presetlist.get_active_text()))
+    #             presetdelbutton.set_active(False)
+    #             # presetlist.remove(# presetlist.get_active())
+    #
+    #         else:
+    #             if not # presetlist.get_active_text() is None:
+    #                 logger.debug("Going to: " + # presetlist.get_active_text())
+    #                 cam.go_to_preset(cam.identify_preset(# presetlist.get_active_text()))
 
 
     def empty_entry(self, presetdelbutton):
         if presetdelbutton.get_active():
-            presetlist.set_active(-1)
-            presetlist.remove(0)
+            pass
+            # presetlist.set_active(-1)
+            # presetlist.remove(0)
         elif not presetdelbutton.get_active():
-            presetlist.insert(0, "home", "home")
+            pass
+            # presetlist.insert(0, "home", "home")
 
 
     def save_preset_icon(self, newpreset, pos, event):
         if newpreset.get_text() == "home":
             cam.set_home()
-            presetlist.set_active_id(newpreset.get_text())
+            # presetlist.set_active_id(newpreset.get_text())
             newpreset.set_text("")
         else:
             cam.set_preset(newpreset.get_text())
-            presetlist.append(newpreset.get_text(), newpreset.get_text())
-            presetlist.set_active_id(newpreset.get_text())
+            # presetlist.append(newpreset.get_text(), newpreset.get_text())
+            # presetlist.set_active_id(newpreset.get_text())
             newpreset.set_text("")
 
 
     def save_preset(self, newpreset):
         if newpreset.get_text() == "home":
             cam.set_home()
-            presetlist.set_active_id(newpreset.get_text())
+            # presetlist.set_active_id(newpreset.get_text())
             newpreset.set_text("")
         else:
             cam.set_preset(newpreset.get_text())
-            presetlist.append(newpreset.get_text(), newpreset.get_text())
-            presetlist.set_active_id(newpreset.get_text())
+            # presetlist.append(newpreset.get_text(), newpreset.get_text())
+            # presetlist.set_active_id(newpreset.get_text())
             newpreset.set_text("")
 
 
@@ -990,7 +992,8 @@ class onvif_interface():
                     logger.warn("Error loading a preset from the OC properties! Error:", e)
 
         try:
-            presetlist.set_active_id(preset)
+            pass
+            # presetlist.set_active_id(preset)
             #  cam.goToPreset(cam.identifyPreset(preset))
 
         except Exception as e:
@@ -1000,7 +1003,8 @@ class onvif_interface():
     def on_stop_recording(self, elem, elem2):
         axis_http.tallyled(False)
         try:
-            presetlist.set_active_id(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET))
+            pass
+            # presetlist.set_active_id(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET))
             #  cam.goToPreset(cam.identifyPreset(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET)))
 
         except Exception as e:
