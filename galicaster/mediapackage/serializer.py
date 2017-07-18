@@ -231,7 +231,7 @@ def set_manifest(mp, use_namespace=True):
         xml.setAttribute("start", oc_start.isoformat())
     else:
         xml.setAttribute("start", mp.getDate().isoformat())
-    if mp.getDuration() is None:
+    if mp.getDuration() != None:
         xml.setAttribute("duration", unicode(mp.getDuration()))
 
     doc.appendChild(xml)
