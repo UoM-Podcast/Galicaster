@@ -11,6 +11,7 @@ workflow_new = conf.get('changemp', 'workflow')
 workflow_parameters = conf.get('changemp', 'workflow-parameters')
 remove_parameters = conf.get('changemp', 'remove-parameters')
 series = conf.get('changemp', 'set-series')
+source = conf.get('changemp', 'set-source')
 title = conf.get('changemp', 'set-title')
 oc_definition = 'org.opencastproject.workflow.definition'
 workflow_config = 'org.opencastproject.workflow.config'
@@ -34,6 +35,9 @@ def changemp(self, action, mp):
         series_dict = {'identifier': series, 'title': series_title}
         mp.setSeries(series_dict)
         logger.info('series {0} - {1} was set for manual recording {2}'.format(series, series_title, mp.getIdentifier()))
+    if source:
+        source_dict = {'source': source}
+        mp.setSource(source_dict)
     if title:
         mp.setTitle(title + ' ' + mp.getStartDateAsString())
     try:

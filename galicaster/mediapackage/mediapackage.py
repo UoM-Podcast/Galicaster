@@ -653,6 +653,15 @@ class Mediapackage(object):
         self.metadata_episode["isPartOf"] = catalog['identifier']
         self.metadata_series = catalog
 
+    def setSource(self, catalog): # catalog is a dictionary with metadata
+        """Sets the metadata of the mediapackage episode with a source tag
+        Args:
+            catalog (Dict{Str,str}): information of the metadata source.
+        """
+        if catalog == None:
+            catalog = {'source': None }
+        self.metadata_episode["source"] = catalog['source']
+
     def getLicense(self):
         """Gets the mediapackage episode license.
         Returns:
