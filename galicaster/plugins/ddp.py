@@ -84,7 +84,8 @@ class DDP(Thread):
         self._screen_width = screen.get_width()
         self._screen_height = screen.get_height()
         self.cardindex = None
-
+        self.cam_uri = '/view/viewer_index.shtml'
+        self.support_group = conf.get('ddp', 'support_group')
         cam_available = conf.get(
             'ddp',
             'cam_available') or 0
@@ -311,7 +312,11 @@ class DDP(Thread):
                 'paused': self.paused,
                 'recording': self.recording,
                 'heartbeat': int(time.time()),
-                'camAvailable': self.cam_available,
+                'supportGroup': self.support_group,
+                'camAvailable': {
+                    'available': self.cam_available,
+                    'uri': self.cam_uri
+                },
                 'inputs': self.inputs(),
                 'stream': {
                     'host': self._stream_host,
