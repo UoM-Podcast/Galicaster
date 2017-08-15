@@ -102,7 +102,7 @@ def save_failover_audio(self, mp_id):
             else:
                 replace_audio(mp)
         else:
-            os.remove(os.path.join(mpUri, os.path.basename(FAILOVER_FILE)))
+            logger.info('Audio Level is OK ({}), keeping audio track'.format(pipeline_amp))
             mp.remove('track-0')
     remove_temp(temp_amp)
 
