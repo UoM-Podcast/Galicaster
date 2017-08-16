@@ -77,6 +77,15 @@ def remove_temp(tmpf):
         os.remove(tmpf)
 
 
+def find_track_by_filename(mp):
+    # FIXME using arbitrary range to loop through track identifiers, better to implement a mediapackage
+    # function to find the idenfier based on track file name
+    for i in range(0, 10):
+        track = mp.getTrack('track-{}'.format(str(i)))
+        if track.uri.split('/')[-1] == "failover.mp3":
+            return 'track-{}'.format(str(i))
+
+
 def save_failover_audio(self, mp_id):
     global repo, logger, temp_amp
     mp = repo.get(mp_id)
@@ -103,7 +112,9 @@ def save_failover_audio(self, mp_id):
                 replace_audio(mp)
         else:
             logger.info('Audio Level is OK ({}), keeping audio track'.format(pipeline_amp))
-            mp.remove('track-0')
+            track_id = find_track_by_filename(mp)
+            mp.remove(track_id)
+            repo.update(mp)
     remove_temp(temp_amp)
 
 
@@ -128,7 +139,8 @@ def replace_audio(mp):
     try:
         shutil.copyfile(FAILOVER_FILE, dest)
         # os.remove(FAILOVER_FILE)
-        mp.remove('track-0')
+        track_id = find_track_by_filename(mp)
+        mp.remove(track_id)
         repo.update(mp)
         logger.info('Replaced quite audio with failover recording, URI: %s', mpUri)
     except Exception as exc:
