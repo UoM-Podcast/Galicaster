@@ -38,11 +38,10 @@ class HandleError(object):
             self.match_end = conf.get('handleerror', 'match_end').split(';')
         except:
             self.match_end = None
-        # self.action = conf.get('handleerror', 'action')
         self.killscript = conf.get('handleerror', 'killscript')
         self.errormsg = errormsg
 
-    def do_error(self, err, kill=True):
+    def do_error(self, err, kill=None):
         logger.info('Notifying nagios of the galicaster error')
         if conf.get_boolean('plugins', 'gcnagios') is True:
             gcnagios.GCNagios().nagios_gst_error(None, err)
@@ -53,7 +52,7 @@ class HandleError(object):
             except:
                 logger.debug("killing Galicaster by script was not successful. Path: {}".format(self.killscript))
 
-    def execute_error_task(self, matcher, msg, match_type, kill=True):
+    def execute_error_task(self, matcher, msg, match_type, kill=None):
         if matcher:
             for err in matcher:
                 if match_type == 'start':
