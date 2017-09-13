@@ -32,10 +32,12 @@ def changemp(self, action, mp):
     repo = context.get_repository()
     if series:
         # series_title = mhclient.get_single_series(series)['title'][0]['value']
-        series_title = getSeriesbyId(get_default_series())['list']['title']
-        series_dict = {'identifier': series, 'title': series_title}
+        # series_title = getSeriesbyId(get_default_series())['list']['title']
+        # series_dict = {'identifier': series, 'title': series_title}
+        # get the full series from OC
+        series_dict = getSeriesbyId(get_default_series())['list']
         mp.setSeries(series_dict)
-        logger.info('series {0} - {1} was set for manual recording {2}'.format(series, series_title, mp.getIdentifier()))
+        logger.info('series {0} was set for manual recording {1}'.format(series, mp.getIdentifier()))
     if source:
         source_dict = {'source': source}
         mp.setSource(source_dict)
