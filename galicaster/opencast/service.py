@@ -187,7 +187,7 @@ class OCService(object):
         try:
             self.client.welcome()
             self.__set_opencast_up()
-            # self.jobs.put((self.set_state, ()))
+            self.jobs.put((self.set_state, ()))
             self.jobs.put((self.process_ical, ()))
             # self.jobs.put((self.update_series,()))
             if self.conf.tracks_visible_to_opencast():
