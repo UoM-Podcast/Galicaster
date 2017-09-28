@@ -260,7 +260,7 @@ class OCService(object):
         if not self.scheduler.mp_rec:
             return
         mp = self.repo.get(self.scheduler.mp_rec)
-
+        self.t_stop = mp.getDuration()
         if mp and not mp.manual:
             now_is_recording_time = (mp.getDate() < datetime.datetime.utcnow() and mp.getDate() + datetime.timedelta(seconds=(self.t_stop/1000)) > datetime.datetime.utcnow()) or (mp.getDate() - datetime.timedelta(seconds=20) < datetime.datetime.utcnow())
             if now_is_recording_time:
