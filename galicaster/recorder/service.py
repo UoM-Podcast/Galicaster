@@ -182,6 +182,7 @@ class RecorderService(object):
 
 
     def stop(self, force=False):
+
         self.logger.info("Stopping the capture")
         if self.status == PAUSED_STATUS:
             self.resume()
@@ -325,17 +326,23 @@ class RecorderService(object):
         self.logger.error("Handle error ({})". format(error_msg))
         # self.current_mediapackage = None
         if self.recorder:
-            self.recorder.stop(True)
+            self.recorder.stop()
+            # self.dispatcher.emit("recorder-stopping")
             if self.status == RECORDING_STATUS:
-                self.repo.recover_recording()
-                self.current_mediapackage = None
+                if self.conf.get_choice('repository', 'recoverytype', ['full', 'save'], 'full') == 'save':
+                    self.repo.save_crash_recordings()
+                    self.current_mediapackage.status = mediapackage.SCHEDULED
+                    # self.current_mediapackage = None
+                else:
+                    self.repo.recover_recording()
+                    self.current_mediapackage = None
 
         self.error_msg = error_msg
         self.__set_status(ERROR_STATUS)
 
         if self.autorecover and not self.__handle_recover_id:
             self.logger.info("Connecting recover recorder callback")
-            self.__handle_recover_id = self.dispatcher.connect("timer-long",
+            self.__handle_recover_id = self.dispatcher.connect("timer-short",
                                                              WeakMethod(self, '_handle_recover'))
 
 
