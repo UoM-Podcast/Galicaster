@@ -51,6 +51,8 @@ class Recorder(object):
         self.restart = False
 #        self.mute = False
         self.mute_status = {"input":{},"preview":{}}
+        self.audio_chan1 = 0.0
+        self.audio_chan2 = 0.0
         self.error = False
         self.is_recording = False
         self.__start_record_time = -1
@@ -315,7 +317,8 @@ class Recorder(object):
         else:
             stereo = False
             valor2 = valor
-
+        self.audio_chan1 = valor
+        self.audio_chan2 = valor2
         self.dispatcher.emit("recorder-vumeter", valor, valor2, stereo)
 
 

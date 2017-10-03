@@ -321,6 +321,12 @@ class RecorderService(object):
         """Proxy function to get the recorder time"""
         return self.recorder.get_recorded_time() if self.recorder else 0
 
+    def get_audio_level(self):
+        try:
+            chan_list = [self.recorder.audio_chan1, self.recorder.audio_chan2]
+        except Exception as e:
+            chan_list = [0.0, 0.0]
+        return chan_list
 
     def _handle_error(self, origin, error_msg):
         self.logger.error("Handle error ({})". format(error_msg))
