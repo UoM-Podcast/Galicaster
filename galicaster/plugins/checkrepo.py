@@ -121,10 +121,11 @@ class FindRecordings(object):
             track_file = track.file
             add_track = [s + '/{}'.format(track_file) for s in rectemps_list]
             # check if its a real file, if not remove from the list
+            real_tracks = []
             for fullpath_t in add_track:
-                if not os.path.isfile(fullpath_t):
-                    add_track.remove(fullpath_t)
-            rectemps_fmted = ('|').join(add_track)
+                if os.path.isfile(fullpath_t):
+                    real_tracks.append(fullpath_t)
+            rectemps_fmted = ('|').join(real_tracks)
             temp_track_file = 'temp_{}.{}'.format(str(uuid.uuid4())[:8], track_file.split(".")[-1])
             # do a file concat per track into the mp
             full_cmd = 'ffmpeg -i "concat:{}" -c copy {}/{}'.format(rectemps_fmted, mpUri, temp_track_file)
@@ -163,7 +164,6 @@ class FindRecordings(object):
     def check_repository(self, signal):
         # mp_list is collection of mediapackages ID's
         # don't check when recording already
-        print 'checkrepoed'
         if recorder.is_recording():
             return
 
