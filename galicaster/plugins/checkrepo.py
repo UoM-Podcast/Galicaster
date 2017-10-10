@@ -171,11 +171,7 @@ class FindRecordings(object):
         for uid,mp in mp_list.iteritems():
             start = mp.getDate()
             end = start + datetime.timedelta(seconds=(mp.getDuration()/1000))
-            print mp.status
-            print start
-            print end
             if mp.status == mediapackage.SCHEDULED and start < datetime.datetime.utcnow() and end > datetime.datetime.utcnow():
-                print 'going'
                 # make a check attachment in the mp to mark the mp as having restarted recording
                 dest = os.path.join(mp.getURI(),self.check_attachment)
                 if not os.path.isfile(dest):
