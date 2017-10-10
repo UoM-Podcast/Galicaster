@@ -48,7 +48,7 @@ class HandleError(object):
         if kill:
             logger.info("killing Galicaster")
             try:
-                os.system(self.killscript)
+                os.system('{} {} {}'.format(self.killscript, err, 'false'))
             except:
                 logger.debug("killing Galicaster by script was not successful. Path: {}".format(self.killscript))
 
