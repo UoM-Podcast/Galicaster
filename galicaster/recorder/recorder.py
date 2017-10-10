@@ -261,7 +261,6 @@ class Recorder(object):
                 logger.error("Error received from element {}: {}".format(msg, err))
                 logger.debug("Debugging information: {}".format(debug))
                 self.__emit_error('Received ERROR message from pipeline', '', stop=False)
-        print 'stoppee'
         self.pipeline.set_state(Gst.State.NULL)
 
 
