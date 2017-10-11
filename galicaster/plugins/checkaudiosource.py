@@ -31,18 +31,18 @@ def init():
 def check_pipeline_amp(self):
     global temp_amp, logger
     global ampsd
-    if context.get_recorder().is_recording():
-        return
-    else:
-        amps = context.get_recorder().get_audio_level()
-        # -699.99 dB seems to be absolute zero for levels
-        if amps[0] <= -699 and amps[1] <= -699:
+    # if context.get_recorder().is_recording():
+    #     return
+    # else:
+    amps = context.get_recorder().get_audio_level()
+    # -699.99 dB seems to be absolute zero for levels
+    if amps[0] <= -699 and amps[1] <= -699:
 
-            if ampsd == False:
-                handleerror.HandleError().do_error('mic has no audio. Level = {}, restarting galicaster'.format(amps), kill=False)
-            else:
-                logger.debug('muted audio detected: {}, preparing galicaster restart'.format(amps))
-            ampsd = False
+        if ampsd == False:
+            handleerror.HandleError().do_error('mic has no audio. Level = {}, restarting galicaster'.format(amps), kill=False)
         else:
-            logger.debug('audio levels OK: {}'.format(amps))
-            ampsd = True
+            logger.debug('muted audio detected: {}'.format(amps))
+        ampsd = False
+    else:
+        logger.debug('audio levels OK: {}'.format(amps))
+        ampsd = True
