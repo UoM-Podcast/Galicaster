@@ -118,7 +118,7 @@ class DDP(Thread):
 
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
-        dispatcher.connect('timer-short', self.update_vu)
+        dispatcher.connect('timer-long', self.update_vu)
         dispatcher.connect('timer-short', self.heartbeat)
         dispatcher.connect('recorder-started', self.on_start_recording)
         dispatcher.connect('recorder-stopped', self.on_stop_recording)
@@ -128,11 +128,12 @@ class DDP(Thread):
         self.connect()
 
     def connect(self):
-        if not self.has_disconnected:
-            try:
-                self.client.connect()
-            except Exception:
-                logger.warn('DDP connection failed')
+        # if not self.has_disconnected:
+        logger.info('Trying to connect to meteor')
+        try:
+            self.client.connect()
+        except Exception:
+            logger.warn('DDP connection failed')
 
     def update(self, collection, query, update):
         if self.client.connected and self.subscribedTo('GalicasterControl'):
