@@ -39,7 +39,7 @@ def check_pipeline_amp(self):
     if amps[0] <= -699 and amps[1] <= -699:
 
         if ampsd == False:
-            handleerror.HandleError().do_error('mic has no audio. Level = {}, restarting galicaster'.format(amps), kill=False)
+            handleerror.HandleError().do_error('mic has no audio. Level = {}, restarting galicaster'.format(amps), kill=False, reboot=True)
         else:
             logger.debug('muted audio detected: {}'.format(amps))
         ampsd = False
