@@ -41,7 +41,7 @@ class HandleError(object):
         self.killscript = conf.get('handleerror', 'killscript')
         self.errormsg = errormsg
 
-    def do_error(self, err, kill=None):
+    def do_error(self, err, kill=None, reboot=None):
         logger.info('Notifying nagios of the galicaster error')
         if conf.get_boolean('plugins', 'gcnagios') is True:
             gcnagios.GCNagios().nagios_gst_error(None, err)
@@ -51,6 +51,12 @@ class HandleError(object):
                 os.system('{} {} {}'.format(self.killscript, err, 'false'))
             except:
                 logger.debug("killing Galicaster by script was not successful. Path: {}".format(self.killscript))
+        if reboot:
+            logger.info("Rebooting the Capture Agent")
+            try:
+                os.system('{}'.format('reboot'))
+            except:
+                logger.debug("Rebooting the capture agent was not successful.")
 
     def execute_error_task(self, matcher, msg, match_type, kill=None):
         if matcher:
