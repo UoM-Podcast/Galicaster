@@ -61,26 +61,53 @@ class GCNagios(object):
             pass
         else:
             self.nag_error = nagios_status[NAGIOS_OK] + ' - gstreamer working'
-            self.make_plugin()
+            self.make_plugin('nagios_gst_error')
+            self.make_plugin('nagios_audio_error')
 
-    def nagios_gst_error(self, signal=None, error_message=None):
+    def nagios_gst_error(self, signal=None, error_message=None, error_type=None):
         # FIXME: get a list of error messages to iterate over or just any error
         if error_message: # and error_message.startswith('GStreamer encountered a general resource error'):
-            logger.debug('GStreamer error: ' + error_message)
-            # FIXME: use config defined message
-            self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message.replace('\n', '') + ' Reboot Required'
-            self.exit_code = NAGIOS_CRITICAL
-            self.make_plugin()
+            if error_type == 'warn':
+                logger.debug('GStreamer warning: ' + error_message)
+                # FIXME: use config defined message
+                self.nag_error = nagios_status[NAGIOS_WARNING] + ' - ' + error_message.replace('\n', '')
+                self.exit_code = NAGIOS_WARNING
+                self.make_plugin('nagios_gst_error')
+            else:
+                logger.debug('GStreamer error: ' + error_message)
+                # FIXME: use config defined message
+                self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message.replace('\n', '')
+                self.exit_code = NAGIOS_CRITICAL
+                self.make_plugin('nagios_gst_error')
         else:
             self.nag_error = 'OK - GStreamer working'
-            self.make_plugin()
+            self.make_plugin('nagios_gst_error')
+
+    def nagios_audio_error(self, signal=None, error_message=None, error_type=None):
+        # FIXME: get a list of error messages to iterate over or just any error
+        if error_message:
+            if error_type == 'warn':
+                logger.debug('galicaster audio warning: ' + error_message)
+                # FIXME: use config defined message
+                self.nag_error = nagios_status[NAGIOS_WARNING] + ' - ' + error_message.replace('\n', '')
+                self.exit_code = NAGIOS_WARNING
+                self.make_plugin('nagios_audio_error')
+            else:
+                logger.debug('galicaster audio error: ' + error_message)
+                # FIXME: use config defined message
+                self.nag_error = nagios_status[NAGIOS_CRITICAL] + ' - ' + error_message.replace('\n', '')
+                self.exit_code = NAGIOS_CRITICAL
+                self.make_plugin('nagios_audio_error')
+        else:
+            self.nag_error = 'OK - galicaster audio'
+            self.make_plugin('nagios_audio_error')
 
     def make_template(self):
         message = plugin_template.substitute(nag_error=self.nag_error, exit_code=self.exit_code)
         return message
 
-    def make_plugin(self):
-        plugin_path_full = self.plugin_path + self.nagios_gst_error.__name__
+    def make_plugin(self, plug_name):
+        plugin_path_full = self.plugin_path + plug_name
         pluginfile = open(plugin_path_full, 'w')
         pluginfile.write(self.make_template())
         pluginfile.close()
