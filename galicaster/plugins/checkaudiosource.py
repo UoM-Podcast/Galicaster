@@ -8,10 +8,12 @@ import shutil
 from galicaster.core import context
 from galicaster.mediapackage import mediapackage
 from galicaster.plugins import handleerror
+from galicaster.plugins import gcnagios
 
 repo = context.get_repository()
 
 ampsd = True
+amp_warn = True
 
 
 def init():
@@ -31,6 +33,7 @@ def init():
 def check_pipeline_amp(self):
     global temp_amp, logger
     global ampsd
+    global amp_warn
     # if context.get_recorder().is_recording():
     #     return
     # else:
@@ -43,6 +46,18 @@ def check_pipeline_amp(self):
         else:
             logger.debug('muted audio detected: {}'.format(amps))
         ampsd = False
+
+    elif -65 >= amps[0] >= -100 and -65 >= amps[1] >= -100:
+
+        if amp_warn == False:
+            handleerror.HandleError().do_audio_warning('mic low audio levels. Level = {}'.format(amps), kill=False, reboot=False)
+        else:
+            logger.debug('low audio detected: {}'.format(amps))
+            amp_warn = False
     else:
         logger.debug('audio levels OK: {}'.format(amps))
+        if ampsd == False or amp_warn == False:
+            gcnagios.GCNagios().nagios_default_state()
+        amp_warn = True
         ampsd = True
+

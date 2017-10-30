@@ -58,6 +58,11 @@ class HandleError(object):
             except:
                 logger.debug("Rebooting the capture agent was not successful.")
 
+    def do_audio_warning(self, err, kill=None, reboot=None):
+        logger.info('Notifying nagios of the galicaster warning')
+        if conf.get_boolean('plugins', 'gcnagios') is True:
+            gcnagios.GCNagios().nagios_audio_error(None, err, error_type='warn')
+
     def execute_error_task(self, matcher, msg, match_type, kill=None):
         if matcher:
             for err in matcher:
