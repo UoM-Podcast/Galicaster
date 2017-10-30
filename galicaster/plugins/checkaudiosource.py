@@ -9,6 +9,7 @@ from galicaster.core import context
 from galicaster.mediapackage import mediapackage
 from galicaster.plugins import handleerror
 from galicaster.plugins import gcnagios
+from galicaster.plugins import gcmail
 
 repo = context.get_repository()
 
@@ -30,6 +31,20 @@ def init():
     except ValueError:
         pass
 
+
+def send_email():
+    # send email to email address(s) listed in the mediapackage
+    ca_name = conf.get('ingest', 'hostname')
+    subject = "Audio Event Logging: {}".format(ca_name)
+    email = 'podcast-tech@manchester.ac.uk'
+    message = """
+This is an automated email to log a galicaster event
+
+No Audio detected in {}. CA restarting
+""".format(ca_name)
+    gcmail.GCEmail().send_mail(email, subject, message)
+
+
 def check_pipeline_amp(self):
     global temp_amp, logger
     global ampsd
@@ -45,6 +60,7 @@ def check_pipeline_amp(self):
             handleerror.HandleError().do_error('mic has no audio. Level = {}, restarting galicaster'.format(amps), kill=False, reboot=True)
         else:
             logger.debug('muted audio detected: {}'.format(amps))
+            send_email()
         ampsd = False
 
     elif -65 >= amps[0] >= -100 and -65 >= amps[1] >= -100:
