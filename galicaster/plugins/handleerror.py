@@ -54,7 +54,7 @@ class HandleError(object):
         if reboot:
             logger.info("Rebooting the Capture Agent")
             try:
-                os.system('{}'.format('reboot'))
+                os.system('{}'.format('sudo reboot'))
             except:
                 logger.debug("Rebooting the capture agent was not successful.")
 
