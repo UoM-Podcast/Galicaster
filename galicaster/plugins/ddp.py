@@ -258,20 +258,20 @@ class DDP(Thread):
                 self.last_vu = self.vu_data
 
     def on_rec_status_update(self, element, data):
-        if str(data) == 'paused':
+        if data == 'paused':
             is_paused = True
         else:
             is_paused = False
         if is_paused:
             self.update_images(.75)
-        if self.paused != is_paused:
+        if self.paused == is_paused:
             self.update(
                 'rooms', {
                     '_id': self.id}, {
                     '$set': {
                         'paused': is_paused}})
             self.paused = is_paused
-        if str(data) == 'recording':
+        if data == 'recording':
             self.update_images(.75)
 
     def media_package_metadata(self, id):
