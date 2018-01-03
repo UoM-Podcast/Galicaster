@@ -59,7 +59,6 @@ def check_pipeline_amp(self):
     # else:
     amps = context.get_recorder().get_audio_level()
     # -699.99 dB seems to be absolute zero for levels
-    print amps
     if amps[0] <= -699 and amps[1] <= -699:
 
         if ampsd == False:
