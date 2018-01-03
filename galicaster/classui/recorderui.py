@@ -119,11 +119,16 @@ class RecorderClassUI(Gtk.Box):
 
         # STATUS
         self.view = self.set_status_view()
-        hbox1 = self.gui.get_object('hbox1')
-        hbox1.add(self.view)
+        box6 = self.gui.get_object('box6')
+        box6.add(self.view)
         self.dispatcher.connect_ui("init", self.check_status_area)
         self.dispatcher.connect_ui("init", self.check_net, None)
         self.dispatcher.connect_ui("opencast-status", self.check_net)
+
+        # CAMERA
+        self.view2 = self.set_status_view()
+        box7 = self.gui.get_object('box7')
+        box7.add(self.view2)
 
         # UI
         self.pack_start(self.recorderui,True,True,0)
@@ -471,6 +476,7 @@ class RecorderClassUI(Gtk.Box):
         """Create as preview areas as video sources exits"""
         main = self.main_area
 
+        main.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("red"))
         for child in main.get_children():
             main.remove(child)
             child.destroy()
@@ -480,11 +486,12 @@ class RecorderClassUI(Gtk.Box):
 
         areas = dict()
         for source in sources:
+            print source
             new_area = Gtk.DrawingArea()
             new_area.set_name(source)
             new_area.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("black"))
             areas[source] = new_area
-            main.pack_start(new_area, True, True, int(self.proportion*3))
+            main.pack_start(new_area, True, True, int(self.proportion*5))
 
         for child in main.get_children():
             child.show()
@@ -536,7 +543,7 @@ class RecorderClassUI(Gtk.Box):
         v.add_attribute(r, "background", 1)
         v.add_attribute(r, "foreground", 2)
         v.set_displayed_row(Gtk.TreePath(0))
-        relabel(v,k1*42,True)
+        relabel(v,k1*38,True)
         return v
 
 
@@ -735,6 +742,13 @@ class RecorderClassUI(Gtk.Box):
         # Change status label
         if status in STATUSES:
             self.view.set_displayed_row(Gtk.TreePath(STATUSES.index(status)))
+            self.view2.set_displayed_row(Gtk.TreePath(STATUSES.index(PREVIEW_STATUS)))
+            if self.recorder.current_mediapackage:
+                capture_dev_names = self.recorder.current_mediapackage.getOCCaptureAgentProperty('capture.device.names')
+                print capture_dev_names
+                if capture_dev_names != 'defaults':
+                    if'camera' not in capture_dev_names:
+                        self.view2.set_displayed_row(Gtk.TreePath(STATUSES.index(status)))
         else:
             logger.error("Unable to change status label, unknown status {}".format(status))
         # Close error dialog
