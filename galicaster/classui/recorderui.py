@@ -332,11 +332,12 @@ class RecorderClassUI(Gtk.Box):
         event_type = self.gui.get_object("nextlabel")
         title = self.gui.get_object("titlelabel")
         status = self.gui.get_object("eventlabel")
+        cam = self.gui.get_object("camlabel")
 
-        return status, event_type, title
+        return status, event_type, title, cam
 
 
-    def update_scheduler_timeout(self, status, event_type, title):
+    def update_scheduler_timeout(self, status, event_type, title, cam):
         """GObject.timeout callback with 500 ms intervals"""
         global status_label_changed, status_label_blink, signalized
 
@@ -351,12 +352,19 @@ class RecorderClassUI(Gtk.Box):
 
             if self.recorder.current_mediapackage.anticipated:
                 status.set_text("")
+                cam.set_text("")
                 event_type.set_text(CURRENT_TEXT)
                 title.set_text(self.recorder.current_mediapackage.title)
 
                 return True
             status.set_text(_("Stopping in {0}").format(readable.long_time(dif)))
             event_type.set_text(CURRENT_TEXT)
+            if self.recorder.current_mediapackage:
+                capture_dev_names = self.recorder.current_mediapackage.getOCCaptureAgentProperty('capture.device.names')
+                if capture_dev_names:
+                    if capture_dev_names != 'defaults':
+                        if'camera' in capture_dev_names:
+                            cam.set_text("Camera Recording")
             title.set_text(self.recorder.current_mediapackage.title)
 
             if dif < datetime.timedelta(0, TIME_RED_STOP):
@@ -410,6 +418,8 @@ class RecorderClassUI(Gtk.Box):
                     event_type.set_text("")
                 if status.get_text():
                     status.set_text("")
+                if cam.get_text():
+                    cam.set_text("")
                 title.set_text(_("No upcoming events"))
 
         return True
