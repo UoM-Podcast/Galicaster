@@ -26,6 +26,11 @@ def init():
         conf = context.get_conf()
         recorder = context.get_recorder()
 
+        global low_alert
+        global check_recording
+        low_alert = conf.get_int('checkaudiosource', 'low_alert', -50)
+        check_recording = conf.get_boolean('checkaudiosource', 'check_recording', False)
+
         dispatcher.connect('timer-short', check_pipeline_amp)
 
     except ValueError:
@@ -46,7 +51,7 @@ No Audio detected in {}. CA restarting
 
 
 def check_pipeline_amp(self):
-    global temp_amp, logger
+    global logger
     global ampsd
     global amp_warn
     # if context.get_recorder().is_recording():
@@ -62,14 +67,28 @@ def check_pipeline_amp(self):
             logger.debug('muted audio detected: {}'.format(amps))
             send_email()
         ampsd = False
-
-    elif -65 >= amps[0] >= -100 and -65 >= amps[1] >= -100:
-
-        if amp_warn == False:
-            handleerror.HandleError().do_audio_warning('mic low audio levels. Level = {}'.format(amps), kill=False, reboot=False)
+    # check for abnormally low audio levels when recording and create a nagios warning if so.
+    elif amps[0] <= low_alert and amps[1] <= low_alert:
+        if check_recording:
+            if recorder.is_recording():
+                if amp_warn == False:
+                    handleerror.HandleError().do_audio_warning('Low audio during Recording. Level = {}'.format(amps),
+                                                               kill=False, reboot=False)
+                else:
+                    logger.debug('Low audio during Recording: {}'.format(amps))
+                    amp_warn = False
+            else:
+                logger.debug('Low audio but tolerated: {}'.format(amps))
+                if ampsd == False or amp_warn == False:
+                    gcnagios.GCNagios().nagios_default_state()
+                amp_warn = True
+                ampsd = True
         else:
-            logger.debug('low audio detected: {}'.format(amps))
-            amp_warn = False
+            if amp_warn == False:
+                handleerror.HandleError().do_audio_warning('Low audio levels. Level = {}'.format(amps), kill=False, reboot=False)
+            else:
+                logger.debug('low audio detected: {}'.format(amps))
+                amp_warn = False
     else:
         logger.debug('audio levels OK: {}'.format(amps))
         if ampsd == False or amp_warn == False:
