@@ -21,7 +21,7 @@ from galicaster.recorder.utils import get_videosink, get_audiosink
 
 videostr = (
     ' decklinkvideosrc connection=gc-blackmagic-conn mode=gc-blackmagic-mode device-number=gc-blackmagic-subd name=gc-blackmagic-src ! '
-    ' deinterlace ! videoconvert ! queue ! videobox name=gc-blackmagic-videobox top=0 bottom=0 ! '
+    ' deinterlace ! videoconvert ! queue ! '
     ' videorate ! gc-blackmagic-capsfilter !'
     ' queue ! videocrop name=gc-blackmagic-crop ! textoverlay name=gc-blackmagic-text ! '
     ' tee name=gc-blackmagic-tee  ! queue ! videoconvert ! caps-preview ! gc-vsink '
@@ -321,19 +321,21 @@ class GCblackmagic(Gst.Bin, base.Base):
             src2.send_event(event)
 
     def disable_input(self):
-        src1 = self.get_by_name('gc-blackmagic-videobox')
-        src1.set_properties(top=-10000, bottom=10000)
-        if self.has_audio:
-            element = self.get_by_name("gc-blackmagic-volumeinput")
-            element.set_property("mute", True)
+        # src1 = self.get_by_name('gc-blackmagic-videobox')
+        # src1.set_properties(top=-10000, bottom=10000)
+        # if self.has_audio:
+        #     element = self.get_by_name("gc-blackmagic-volumeinput")
+        #     element.set_property("mute", True)
+        pass
 
     def enable_input(self):
-        src1 = self.get_by_name('gc-blackmagic-videobox')
-        src1.set_property('top', 0)
-        src1.set_property('bottom', 0)
-        if self.has_audio:
-            element = self.get_by_name("gc-blackmagic-volumeinput")
-            element.set_property("mute", False)
+        # src1 = self.get_by_name('gc-blackmagic-videobox')
+        # src1.set_property('top', 0)
+        # src1.set_property('bottom', 0)
+        # if self.has_audio:
+        #     element = self.get_by_name("gc-blackmagic-volumeinput")
+        #     element.set_property("mute", False)
+        pass
 
     def disable_preview(self):
         src1 = self.get_by_name('sink-' + self.options['name'])

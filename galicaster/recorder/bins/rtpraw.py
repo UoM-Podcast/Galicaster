@@ -26,7 +26,7 @@ pipe_config = {'mpeg4':
 
 
 pipestr = (' rtspsrc name=gc-rtpraw-src ! gc-rtpraw-depay ! gc-rtpraw-videoparse ! queue ! '
-           ' gc-rtpraw-dec ! videoscale ! capsfilter name=gc-rtpraw-filter ! videobox name=gc-rtpraw-videobox top=0 bottom=0 ! '
+           ' gc-rtpraw-dec ! videoscale ! capsfilter name=gc-rtpraw-filter ! '
            ' tee name=gc-rtpraw-tee  ! queue ! caps-preview ! gc-vsink '
            ' gc-rtpraw-tee. ! queue ! valve drop=false name=gc-rtpraw-valve ! videoconvert ! '
            ' queue ! gc-rtpraw-enc ! queue ! gc-rtpraw-muxer name=gc-rtpraw-mux ! queue ! filesink name=gc-rtpraw-sink async=false')
@@ -148,13 +148,15 @@ class GCrtpraw(Gst.Bin, base.Base):
         src1.send_event(event)
 
     def disable_input(self):
-        src1 = self.get_by_name('gc-rtpraw-videobox')
-        src1.set_properties(top = -10000, bottom = 10000)
+        # src1 = self.get_by_name('gc-rtpraw-videobox')
+        # src1.set_properties(top = -10000, bottom = 10000)
+        pass
 
     def enable_input(self):
-        src1 = self.get_by_name('gc-rtpraw-videobox')
-        src1.set_property('top',0)
-        src1.set_property('bottom',0)
+        # src1 = self.get_by_name('gc-rtpraw-videobox')
+        # src1.set_property('top',0)
+        # src1.set_property('bottom',0)
+        pass
 
     def disable_preview(self):
         src1 = self.get_by_name('sink-'+self.options['name'])
