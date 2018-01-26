@@ -92,10 +92,12 @@ class DoingThings():
     def __init__(self):
         self.megas = None
         self.full_cmd = conf.get('livestream', 'livestream_ffmpeg')
-        self.camera_ip = conf.get('camctrl', 'ip')
-        self.camera_web_user = conf.get('camctrl', 'web_username')
-        self.camera_web_pass = conf.get('camctrl', 'web_password')
-        self.axis_http = axis_web.AxisWeb(self.camera_ip, self.camera_web_user, self.camera_web_pass)
+        self.camera_exists = conf.get_boolean('livestream', 'camera_exists')
+        if self.camera_exists:
+            self.camera_ip = conf.get('camctrl', 'ip')
+            self.camera_web_user = conf.get('camctrl', 'web_username')
+            self.camera_web_pass = conf.get('camctrl', 'web_password')
+            self.axis_http = axis_web.AxisWeb(self.camera_ip, self.camera_web_user, self.camera_web_pass)
 
     def on_button_toggled(self, button):
 
@@ -107,7 +109,8 @@ class DoingThings():
             sidenote.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(255, 0, 0, 1))
             setts = builder.get_object("settings_label")
             setts.set_markup('<b>Livestream: ON AIR</b>')
-            self.axis_http.tallyled(True)
+            if self.camera_exists:
+                self.axis_http.tallyled(True)
             # setts.set_name('red_coloured')
             self.megas = self.output_1()
         else:
@@ -117,7 +120,8 @@ class DoingThings():
             slamm.override_background_color(Gtk.StateType.NORMAL)
             sidenote.override_background_color(Gtk.StateType.NORMAL)
             setts = builder.get_object("settings_label")
-            self.axis_http.tallyled(False)
+            if self.camera_exists:
+                self.axis_http.tallyled(False)
             setts.set_text('Livestream Stopped')
             # setts.set_name('black_coloured')
             self.megas.get().terminate()
