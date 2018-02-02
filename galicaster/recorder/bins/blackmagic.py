@@ -264,6 +264,17 @@ class GCblackmagic(Gst.Bin, base.Base):
             element = self.get_by_name('gc-blackmagic-crop')
             element.set_property(pos, int(self.options['videocrop-' + pos]))
 
+        # Text Overlay
+        if "textoverlay" in self.options:
+            text_ops = self.options["textoverlay"]
+            text_ops = dict(item.split("=") for item in text_ops.split(","))
+            text = self.get_by_name("gc-blackmagic-text")
+            for opts, vals in text_ops.iteritems():
+                if opts == 'outline-color':
+                    text.set_property(opts, int(vals))
+                else:
+                    text.set_property(opts, vals)
+
         # Audio properties
         if self.has_audio:
             if "player" in self.options and self.options["player"] == False:
@@ -281,16 +292,6 @@ class GCblackmagic(Gst.Bin, base.Base):
             if "amplification" in self.options:
                 ampli = self.get_by_name("gc-blackmagic-amplify")
                 ampli.set_property("amplification", float(self.options["amplification"]))
-
-            if "textoverlay" in self.options:
-                text_ops = self.options["textoverlay"]
-                text_ops = dict(item.split("=") for item in text_ops.split(","))
-                text = self.get_by_name("gc-blackmagic-text")
-                for opts, vals in text_ops.iteritems():
-                    if opts == 'outline-color':
-                        text.set_property(opts, int(vals))
-                    else:
-                        text.set_property(opts, vals)
 
     def changeValve(self, value):
         valve1 = self.get_by_name('gc-blackmagic-valve')
