@@ -365,6 +365,12 @@ class RecorderClassUI(Gtk.Box):
                     if capture_dev_names != 'defaults':
                         if'camera' in capture_dev_names:
                             cam.set_text("Camera Recording")
+                        else:
+                            cam.set_text("")
+                    else:
+                        cam.set_text("")
+                else:
+                    cam.set_text("")
             title.set_text(self.recorder.current_mediapackage.title)
 
             if dif < datetime.timedelta(0, TIME_RED_STOP):
@@ -388,6 +394,7 @@ class RecorderClassUI(Gtk.Box):
                 dif = start - datetime.datetime.now()
                 event_type.set_text(NEXT_TEXT)
                 title.set_text(next_mediapackage.title)
+                cam.set_text("")
                 status.set_text(_("Starting in {0}").format(readable.long_time(dif)))
 
                 if dif < datetime.timedelta(0,TIME_UPCOMING):
