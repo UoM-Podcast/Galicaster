@@ -201,28 +201,6 @@ class QRCodeScanner():
     def handle_symbol(self, symbol, timestamp):
         gst_status = self.recorder.recorder.get_status()[1]
         if self.recorder.is_recording() and gst_status == Gst.State.PLAYING:
-            # stop recording early on qrcode, requires scheduled recording,
-            # <= user defined period (min) before ending and user defined period (sec) of qrcode showing
-            if self.symbol_finish == symbol:
-                mp = self.recorder.current_mediapackage
-                if not mp.manual:
-                    # self.finish_timer = None
-                    start = mp.getDate()
-                    end = start + datetime.timedelta(seconds=(mp.getDuration() / 1000))
-                    finish_zone = end - datetime.timedelta(minutes=self.finish_timeframe)
-                    if finish_zone <= datetime.datetime.utcnow():
-                        if not self.finish_timeout_start:
-                            self.finish_timeout_start = timestamp / NANO2SEC
-                        self.finish_timeout_end = timestamp / NANO2SEC
-                        if (self.finish_timeout_end - self.finish_timeout_start) >= self.finish_show_time:
-                            self.logger.info('Ending Recording early after QRcode command')
-                            if self.notify_email:
-                                self.send_email(mp)
-                            # cleanup timeouts data
-                            self.finish_timeout_end = None
-                            self.finish_timeout_start = None
-                            # this function does not like to be in another thread!
-                            self.recorder.stop()
 
             if self.mode == 'hold':
                 if self.symbol_hold == symbol:
@@ -232,7 +210,6 @@ class QRCodeScanner():
                         self.recorder.pause()
                         self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
-                        self.recorder.pause()
                         self.logger.info('Paused recording at {}'.format((timestamp) / NANO2SEC))
                         self.recording_paused = True
                         self.hold_timestamp = 0
@@ -268,6 +245,29 @@ class QRCodeScanner():
                     self.logger.info('Resumed recording at {}'.format(timestamp))
                     self.recording_paused = False
                     self.recorder.resume()
+
+            # stop recording early on qrcode, requires scheduled recording,
+            # <= user defined period (min) before ending and user defined period (sec) of qrcode showing
+            if self.symbol_finish == symbol:
+                mp = self.recorder.current_mediapackage
+                if not mp.manual:
+                    # self.finish_timer = None
+                    start = mp.getDate()
+                    end = start + datetime.timedelta(seconds=(mp.getDuration() / 1000))
+                    finish_zone = end - datetime.timedelta(minutes=self.finish_timeframe)
+                    if finish_zone <= datetime.datetime.utcnow():
+                        if not self.finish_timeout_start:
+                            self.finish_timeout_start = timestamp / NANO2SEC
+                        self.finish_timeout_end = timestamp / NANO2SEC
+                        if (self.finish_timeout_end - self.finish_timeout_start) >= self.finish_show_time:
+                            self.logger.info('Ending Recording early after QRcode command')
+                            if self.notify_email:
+                                self.send_email(mp)
+                            # cleanup timeouts data
+                            self.finish_timeout_end = None
+                            self.finish_timeout_start = None
+                            # this function does not like to be in another thread!
+                            self.recorder.stop()
 
     def has_hold_timed_out(self, recorder, timestamp):
         # self.logger.debug( '...timer testing {} {} {}'.format(timestamp, self.hold_timestamp, self.hold_timestamp-timestamp)
