@@ -84,7 +84,7 @@ def init():
         dispatcher = context.get_dispatcher()
         dispatcher.connect('recorder-ready', qr.qrcode_add_pipeline)
         # only process sync-messages when recording to reduce overhead
-        dispatcher.connect('recorder-started', qr.qrcode_connect_to_sync_message)
+        dispatcher.connect('recorder-ready', qr.qrcode_connect_to_sync_message)
         dispatcher.connect('recorder-stopped', qr.qrcode_disconnect_to_sync_message)
         qr.set_add_edits(conf.get_boolean('qrcode', 'mp_add_edits') or False)
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
@@ -149,7 +149,7 @@ class QRCodeScanner():
         self.add_edits = v
 
     # signal handlers
-    def qrcode_connect_to_sync_message(self, sender, mpid):
+    def qrcode_connect_to_sync_message(self, sender):
         # self.logger.debug("Connecting to sync messages")
         # NOTE This callback runs just before the recording actually starts
         #      Therefore recording_start_timestamp is a bit early
@@ -199,8 +199,9 @@ class QRCodeScanner():
             self.check_finish_active(self.finish_timeout_end)
 
     def handle_symbol(self, symbol, timestamp):
+        print 'symbol'
         gst_status = self.recorder.recorder.get_status()[1]
-        if self.recorder.is_recording() and gst_status == Gst.State.PLAYING:
+        if gst_status == Gst.State.PLAYING:
 
             if self.mode == 'hold':
                 if self.symbol_hold == symbol:
@@ -211,7 +212,7 @@ class QRCodeScanner():
                         self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
                         self.logger.info('Paused recording at {}'.format((timestamp) / NANO2SEC))
-                        self.recording_paused = True
+                        # self.recording_paused = True
                         self.hold_timestamp = 0
                         self.hold_timer = None
                         self.hold_timer_timestamp = 0
