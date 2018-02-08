@@ -57,6 +57,7 @@ ZBAR_MESSAGE_PATTERN = ("timestamp=\(guint64\)(?P<timestamp>[0-9]+), "
                         "quality=\(int\)(?P<quality>[0-9]+)")
 
 NANO2SEC = 1000000000.0
+NANO2MIL = 1000000
 SEC2NANO = 1000000000
 WORKFLOW_CONFIG = 'org.opencastproject.workflow.config'
 
@@ -84,7 +85,7 @@ def init():
         dispatcher = context.get_dispatcher()
         dispatcher.connect('recorder-ready', qr.qrcode_add_pipeline)
         # only process sync-messages when recording to reduce overhead
-        dispatcher.connect('recorder-ready', qr.qrcode_connect_to_sync_message)
+        dispatcher.connect('recorder-started', qr.qrcode_connect_to_sync_message)
         dispatcher.connect('recorder-stopped', qr.qrcode_disconnect_to_sync_message)
         qr.set_add_edits(conf.get_boolean('qrcode', 'mp_add_edits') or False)
         qr.set_trimhold(conf.get_boolean('qrcode', 'mp_force_trimhold') or False)
@@ -149,7 +150,7 @@ class QRCodeScanner():
         self.add_edits = v
 
     # signal handlers
-    def qrcode_connect_to_sync_message(self, sender):
+    def qrcode_connect_to_sync_message(self, sender, mpid):
         # self.logger.debug("Connecting to sync messages")
         # NOTE This callback runs just before the recording actually starts
         #      Therefore recording_start_timestamp is a bit early
@@ -199,26 +200,27 @@ class QRCodeScanner():
             self.check_finish_active(self.finish_timeout_end)
 
     def handle_symbol(self, symbol, timestamp):
-        print 'symbol'
         gst_status = self.recorder.recorder.get_status()[1]
-        if gst_status == Gst.State.PLAYING:
+        if self.recorder.is_recording() and gst_status == Gst.State.PLAYING:
 
             if self.mode == 'hold':
                 if self.symbol_hold == symbol:
                     # pause
                     if not self.recording_paused:
                         # self.logger.debug('PAUSING')
-                        self.recorder.pause()
+                        # self.recorder.pause()
                         self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
                         self.logger.info('Paused recording at {}'.format((timestamp) / NANO2SEC))
-                        # self.recording_paused = True
+                        self.recording_paused = True
                         self.hold_timestamp = 0
                         self.hold_timer = None
                         self.hold_timer_timestamp = 0
                         # store editpoints
-                        self.editpoints.append(
-                            (timestamp - self.total_pause_duration - self.recording_start_timestamp) / NANO2SEC)
+                        # print 'gst start rec timestamp=',self.recording_start_timestamp / NANO2SEC
+
+                        self.start_cut = (timestamp / NANO2MIL) - (self.recording_start_timestamp / NANO2MIL)
+                        self.editpoints.append(self.start_cut)
                         self.logger.info('Editpoint @ {}'.format(self.editpoints[len(self.editpoints) - 1]))
                         self.last_pause_timestamp = timestamp
 
@@ -279,11 +281,13 @@ class QRCodeScanner():
             self.write_pause_state(False)
             # Check if the 'recording' has been ended
             if self.recorder.is_recording:
-                self.recorder.resume()
+                # self.recorder.resume()
                 # old way for getting recording start time
                 # clock = recorder.pipeline.get_clock()
                 # gstimestamp = clock.get_time() - recorder.pipeline.get_base_time()
                 gstimestamp = self.recorder.get_recorded_time()
+                self.end_cut = self.recorder.recorder.get_recording_clock_time() / NANO2MIL
+                self.editpoints.append(self.end_cut)
                 self.logger.info('Resumed recording at {}'.format(gstimestamp / NANO2SEC))
                 self.logger.info('Paused for {}'.format((gstimestamp - self.last_pause_timestamp) / NANO2SEC))
                 self.total_pause_duration += gstimestamp - self.last_pause_timestamp
