@@ -425,13 +425,18 @@ class QRCodeScanner():
 
     def create_smil(self, mp, editpoints, mp_duration):
         self.logger.info('Create SMIL')
+        has_presentation = 'false'
+        has_presenter = 'false'
         mp_uri = mp.getURI()
+        if mp.getTracks(mimetype='video/avi', flavor='presentation/source'):
+            has_presentation = 'true'
+        if mp.getTracks(mimetype='video/avi', flavor='presenter/source'):
+            has_presenter = 'true'
         outfile = mp_uri + '/' + 'qrcode-smil.xml'
         smil_script = get_script_path('create-smil-fromWorkflow.sh')
         edits = ';'.join(map(str, editpoints))
         mp_id = mp.getIdentifier()
-
-        subprocess.call([smil_script, mp_id, outfile, "true", "true", "false", str(mp_duration), edits])
+        subprocess.call([smil_script, mp_id, outfile, has_presenter, has_presentation, "false", str(mp_duration), edits])
         self.catalog = mediapackage.Catalog(uri=outfile, flavor="smil/cutting",
                                             mimetype="text/xml", tags=["archive"])
         mp.add(self.catalog)
