@@ -75,6 +75,7 @@ class DDP(Thread):
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot_file = conf.get('ddp', 'existing_screenshot')
         self.high_quality = conf.get_boolean('ddp', 'hq_snapshot')
+        self.support_group = conf.get('ddp', 'support_group')
         self.paused = False
         self.recording = False
         self.currentMediaPackage = None
@@ -313,6 +314,7 @@ class DDP(Thread):
                 'recording': self.recording,
                 'heartbeat': int(time.time()),
                 'camAvailable': self.cam_available,
+                'supportGroup': self.support_group,
                 'inputs': self.inputs(),
                 'stream': {
                     'host': self._stream_host,
