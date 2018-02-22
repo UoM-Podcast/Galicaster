@@ -187,10 +187,10 @@ class GCrtp(Gst.Bin, base.Base):
 
     def changeValve(self, value):
         valve1=self.get_by_name('gc-rtp-valve')
+        valve1.set_property('drop', value)
         if self.has_audio:
             valve2=self.get_by_name('gc-rtp-audio-valve')
             valve2.set_property('drop', value)
-        valve1.set_property('drop', value)
 
     def getVideoSink(self):
         return self.get_by_name('sink-' + self.options['name'])
