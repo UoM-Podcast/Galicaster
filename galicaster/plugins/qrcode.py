@@ -145,6 +145,7 @@ class QRCodeScanner():
         self.finish_show_time = finish_show_time
         self.notify_email = notify_email
         self.last_timeout = None
+        self.opencast_edit_devices = ['camera', 'Camera', 'webcam', 'Webcam', 'RTPcamera', 'rtpcamera', 'rtpsource', 'RTPsource', 'CameraSource', 'camerasource']
 
     # set additional parameters
     def set_trimhold(self, v):
@@ -168,6 +169,22 @@ class QRCodeScanner():
         self.total_pause_duration = 0
         self.last_pause_timestamp = 0
         self.editpoints = []
+        # make sure an non pausable video source is being used
+        # bin_devices = []
+        # for name, bin in self.bins.iteritems():
+        #     bin_devices.append(bin.options['device'])
+        pausable = self.recorder.is_pausable()
+        # override galicaster config based on device name from opencast capture properties if using a camera
+        conf = context.get_conf()
+        self.edit_mode = conf.get('qrcode', 'edit_mode') or 'direct'
+        if self.recorder.current_mediapackage:
+            capture_dev_names = self.recorder.current_mediapackage.getOCCaptureAgentProperty('capture.device.names')
+            if capture_dev_names:
+                if capture_dev_names != 'defaults':
+                    if [i for i in self.opencast_edit_devices if i in capture_dev_names] and pausable == False:
+                        self.edit_mode = 'opencast'
+                    else:
+                        self.edit_mode = 'direct'
         self.sync_msg_handler = self.dispatcher.connect('recorder-message-element', self.qrcode_on_sync_message)
 
     def qrcode_disconnect_to_sync_message(self, sender, mpurl):
@@ -411,7 +428,7 @@ class QRCodeScanner():
                     # self.logger.debug('Forcing WF trimHold')
                     occap[WORKFLOW_CONFIG + '.trimHold'] = 'true'
 
-                if self.add_smil:
+                if self.add_smil and self.edit_mode == 'opencast':
                     self.create_smil(mp, adjust_editpoints, mp_end)
 
             occap_list = []
