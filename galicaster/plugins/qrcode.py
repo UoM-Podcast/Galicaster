@@ -177,14 +177,19 @@ class QRCodeScanner():
         # override galicaster config based on device name from opencast capture properties if using a camera
         conf = context.get_conf()
         self.edit_mode = conf.get('qrcode', 'edit_mode') or 'direct'
-        if self.recorder.current_mediapackage:
-            capture_dev_names = self.recorder.current_mediapackage.getOCCaptureAgentProperty('capture.device.names')
+        current_mp = self.recorder.current_mediapackage
+        if current_mp:
+            capture_dev_names = current_mp.getOCCaptureAgentProperty('capture.device.names')
             if capture_dev_names:
                 if capture_dev_names != 'defaults':
                     if [i for i in self.opencast_edit_devices if i in capture_dev_names] and pausable == False:
                         self.edit_mode = 'opencast'
                     else:
                         self.edit_mode = 'direct'
+        # if a manual mp and using qrcode edit on a non pausable device
+        if current_mp.manual:
+            if pausable == False:
+                self.edit_mode = 'opencast'
         self.sync_msg_handler = self.dispatcher.connect('recorder-message-element', self.qrcode_on_sync_message)
 
     def qrcode_disconnect_to_sync_message(self, sender, mpurl):
