@@ -390,6 +390,29 @@ class QRCodeScanner():
         self.pipeline = pipeline
         self.bins = bins
 
+    def transform_pause_to_smil_points(self, mp_end):
+        editpoints = sorted(self.editpoints)
+        # if only one point and its at or before the beginning, safely assume the whole thing is cut
+        if len(self.editpoints) == 1 and self.editpoints[0] <= 0:
+            return [0, 1000]
+
+        # if the first editpoint it less than zero, remove it and make it zero (as opencast SMIL may not like negatives)
+        if editpoints[0] < 0:
+            editpoints.pop(0)
+        else:
+            editpoints.append(0)
+        # sort the points again so the zero is first in the list
+        adjust_editpoints = sorted(editpoints)
+        # if the qrcode is at or past the end time, remove the point
+        if adjust_editpoints[-1] >= mp_end:
+            adjust_editpoints.pop(-1)
+        # if the length of the edit list is odd we need to add the end time to save that section
+        if len(adjust_editpoints) & 1:
+            adjust_editpoints.append(mp_end)
+            # self.logger.debug('adjust_editpoints')
+            # print adjust_editpoints
+        return adjust_editpoints
+
     def qrcode_update_mediapackage(self, sender, mpURI):
         """
         Optional updating of Mediapackage 'org.opencastproject.capture.agent.properties' file with QR code edit points.
@@ -403,23 +426,7 @@ class QRCodeScanner():
             if len(self.editpoints):
                 # Adjustments to the edit list to get the points to keep rather than cut
                 mp_end = mp.getDuration()
-
-                editpoints = sorted(self.editpoints)
-
-                if editpoints[0] < 0:
-                    editpoints.pop(0)
-                else:
-                    editpoints.append(0)
-
-                adjust_editpoints = sorted(editpoints)
-                if adjust_editpoints[-1] >= mp_end:
-                    adjust_editpoints.pop(-1)
-
-                if len(adjust_editpoints) & 1:
-                    adjust_editpoints.append(mp_end)
-
-                # self.logger.debug('adjust_editpoints')
-                # print adjust_editpoints
+                adjust_editpoints = self.transform_pause_to_smil_points(mp_end)
                 if self.add_edits:
                     # self.logger.debug('Adding WF Edit parameters')
                     # flag that we want the workflow to edit our mediapackage
