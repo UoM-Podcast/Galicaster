@@ -20,9 +20,9 @@ from galicaster.recorder import base
 from galicaster.recorder.utils import get_videosink
 
 pipestr = (' videotestsrc name=gc-videotest-src pattern=0 is-live=true ! capsfilter name=gc-videotest-filter ! videobox name=gc-videotest-videobox top=0 bottom=0 !'
-           ' queue ! videoconvert ! video/x-raw ! tee name=tee-vt  ! '
+           ' queue ! videoconvert ! video/x-raw ! textoverlay name=gc-videotest-text ! tee name=gc-videotest-tee  ! '
            ' queue ! caps-preview ! gc-vsink '
-           ' tee-vt. ! queue ! valve drop=false name=gc-videotest-valve ! videoconvert ! queue ! '
+           ' gc-videotest-tee. ! queue ! valve drop=false name=gc-videotest-valve ! videoconvert ! queue ! '
            ' gc-videotest-enc ! queue ! gc-videotest-mux ! '
            ' queue ! filesink name=gc-videotest-sink async=false')
 
@@ -153,6 +153,21 @@ class GCvideotest(Gst.Bin, base.Base):
         #    source.set_property('background-color', int(self.options['color2']))
 
         self.set_option_in_pipeline('caps', 'gc-videotest-filter', 'caps', None)
+
+        if "textoverlay" in self.options:
+            text_ops = self.options["textoverlay"]
+            text_ops = dict(item.split("=") for item in text_ops.split(","))
+            text = self.get_by_name("gc-videotest-text")
+            for opts, vals in text_ops.iteritems():
+                if opts == 'outline-color' or opts == 'color':
+                    text.set_property(opts, int(vals))
+                elif opts == 'draw-shadow':
+                    if vals == 'true':
+                        text.set_property(opts, True)
+                    else:
+                        text.set_property(opts, False)
+                else:
+                    text.set_property(opts, vals)
 
     def changeValve(self, value):
         valve1=self.get_by_name('gc-videotest-valve')
