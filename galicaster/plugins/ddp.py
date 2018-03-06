@@ -28,6 +28,7 @@ import requests
 from threading import Event, Thread
 import time
 import uuid
+from random import randint
 
 from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from MeteorClient import MeteorClient
@@ -133,7 +134,8 @@ class DDP(Thread):
         logger.info('Trying to connect to meteor')
         try:
             self.client.connect()
-        except Exception:
+        except Exception as e:
+            logger.debug(e)
             logger.warn('DDP connection failed')
 
     def update(self, collection, query, update):
@@ -164,7 +166,7 @@ class DDP(Thread):
 
     def heartbeat(self, element):
         if self.client.connected:
-            self.update_images()
+            self.update_images(randint(0, 9))
         else:
             self.connect()
 
@@ -198,10 +200,10 @@ class DDP(Thread):
                     'recording': self.recording
                 }
             })
-        self.update_images(1.5)
+        # self.update_images(1.5)
 
     def on_init(self, data):
-        self.update_images(1.5)
+        self.update_images(randint(0, 9))
 
     def update_images(self, delay=0.0):
         worker = Thread(target=self._update_images, args=(delay,))
@@ -264,7 +266,8 @@ class DDP(Thread):
         else:
             is_paused = False
         if is_paused:
-            self.update_images(.75)
+            # self.update_images(.75)
+            pass
         if self.paused == is_paused:
             self.update(
                 'rooms', {
@@ -273,7 +276,8 @@ class DDP(Thread):
                         'paused': is_paused}})
             self.paused = is_paused
         if data == 'recording':
-            self.update_images(.75)
+            # self.update_images(.75)
+            pass
 
     def media_package_metadata(self, id):
         mp = context.get('recorder').current_mediapackage
@@ -418,7 +422,8 @@ class DDP(Thread):
                 params=[
                     self.id],
                 callback=self.subscription_callback)
-        except Exception:
+        except Exception as e:
+            logger.debug(e)
             logger.warn('DDP subscription failed')
 
     def on_closed(self, code, reason):
