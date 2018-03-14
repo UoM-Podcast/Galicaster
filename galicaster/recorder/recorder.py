@@ -116,6 +116,14 @@ class Recorder(object):
     def get_time(self):
         return self.pipeline.get_clock().get_time()
 
+    def get_recording_clock_time(self):
+        if self.__start_record_time == -1:
+            return 0
+
+        status = self.get_status()[1]
+        if status == Gst.State.NULL:
+            return self.__duration
+        return self.__query_position() - self.__start_record_time
 
     def get_recorded_time(self):
         """Get recorded time in usec"""
