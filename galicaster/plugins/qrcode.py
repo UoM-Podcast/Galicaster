@@ -22,8 +22,11 @@
 
 from galicaster.core import context
 from galicaster.plugins import gcmail
+from galicaster.classui import get_script_path
+from galicaster.mediapackage import mediapackage
 
 import re
+import subprocess
 from threading import Timer
 from os import path, utime, remove
 import datetime
@@ -57,6 +60,7 @@ ZBAR_MESSAGE_PATTERN = ("timestamp=\(guint64\)(?P<timestamp>[0-9]+), "
                         "quality=\(int\)(?P<quality>[0-9]+)")
 
 NANO2SEC = 1000000000.0
+NANO2MIL = 1000000
 SEC2NANO = 1000000000
 WORKFLOW_CONFIG = 'org.opencastproject.workflow.config'
 
@@ -78,7 +82,9 @@ def init():
         finish_timeframe = conf.get_int('qrcode', 'finish_timeframe') or 30  # mins
         finish_show_time = conf.get_int('qrcode', 'finish_show_time') or 10  # secs
         notify_email = conf.get_boolean('qrcode', 'notify_email') or False
-        qr = QRCodeScanner(mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
+        hold_early = conf.get_int('qrcode', 'hold_early') or 0  # secs
+        edit_mode = conf.get('qrcode', 'edit_mode') or 'direct'
+        qr = QRCodeScanner(mode, symbols, hold_timeout, hold_early, edit_mode, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
                            finish_show_time, notify_email, context.get_logger())
 
         dispatcher = context.get_dispatcher()
@@ -97,7 +103,7 @@ def init():
 
 
 class QRCodeScanner():
-    def __init__(self, mode, symbols, hold_timeout, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
+    def __init__(self, mode, symbols, hold_timeout, hold_early, edit_mode, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
                  finish_show_time, notify_email, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
@@ -116,6 +122,8 @@ class QRCodeScanner():
         self.hold_timestamp = 0
         self.hold_timer = None
         self.hold_timer_timestamp = 0
+        self.hold_early = hold_early
+        self.edit_mode = edit_mode
         self.finish_timer = None
         self.logger = logger
         self.pipeline = None
@@ -137,6 +145,7 @@ class QRCodeScanner():
         self.finish_show_time = finish_show_time
         self.notify_email = notify_email
         self.last_timeout = None
+        self.opencast_edit_devices = ['camera', 'Camera', 'webcam', 'Webcam', 'RTPcamera', 'rtpcamera', 'rtpsource', 'RTPsource', 'CameraSource', 'camerasource']
 
     # set additional parameters
     def set_trimhold(self, v):
@@ -160,6 +169,27 @@ class QRCodeScanner():
         self.total_pause_duration = 0
         self.last_pause_timestamp = 0
         self.editpoints = []
+        # make sure an non pausable video source is being used
+        # bin_devices = []
+        # for name, bin in self.bins.iteritems():
+        #     bin_devices.append(bin.options['device'])
+        pausable = self.recorder.is_pausable()
+        # override galicaster config based on device name from opencast capture properties if using a camera
+        conf = context.get_conf()
+        self.edit_mode = conf.get('qrcode', 'edit_mode') or 'direct'
+        current_mp = self.recorder.current_mediapackage
+        if current_mp:
+            capture_dev_names = current_mp.getOCCaptureAgentProperty('capture.device.names')
+            if capture_dev_names:
+                if capture_dev_names != 'defaults':
+                    if [i for i in self.opencast_edit_devices if i in capture_dev_names] and pausable == False:
+                        self.edit_mode = 'opencast'
+                    else:
+                        self.edit_mode = 'direct'
+        # if a manual mp and using qrcode edit on a non pausable device
+        if current_mp.manual:
+            if pausable == False:
+                self.edit_mode = 'opencast'
         self.sync_msg_handler = self.dispatcher.connect('recorder-message-element', self.qrcode_on_sync_message)
 
     def qrcode_disconnect_to_sync_message(self, sender, mpurl):
@@ -207,7 +237,8 @@ class QRCodeScanner():
                     # pause
                     if not self.recording_paused:
                         # self.logger.debug('PAUSING')
-                        self.recorder.pause()
+                        if self.edit_mode == 'direct':
+                            self.recorder.pause()
                         self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
                         self.logger.info('Paused recording at {}'.format((timestamp) / NANO2SEC))
@@ -216,8 +247,15 @@ class QRCodeScanner():
                         self.hold_timer = None
                         self.hold_timer_timestamp = 0
                         # store editpoints
-                        self.editpoints.append(
-                            (timestamp - self.total_pause_duration - self.recording_start_timestamp) / NANO2SEC)
+                        # self.logger.debug('gst start rec timestamp=',self.recording_start_timestamp / NANO2SEC)
+
+                        self.qr_detect = (timestamp / NANO2MIL) - (self.recording_start_timestamp / NANO2MIL)
+                        if self.hold_early > 0:
+                            self.start_cut = self.qr_detect - self.hold_early
+                        else:
+                            self.start_cut = self.qr_detect
+                        # print self.start_cut
+                        self.editpoints.append(self.start_cut)
                         self.logger.info('Editpoint @ {}'.format(self.editpoints[len(self.editpoints) - 1]))
                         self.last_pause_timestamp = timestamp
 
@@ -278,11 +316,15 @@ class QRCodeScanner():
             self.write_pause_state(False)
             # Check if the 'recording' has been ended
             if self.recorder.is_recording:
-                self.recorder.resume()
+                if self.edit_mode == 'direct':
+                    self.recorder.resume()
                 # old way for getting recording start time
                 # clock = recorder.pipeline.get_clock()
                 # gstimestamp = clock.get_time() - recorder.pipeline.get_base_time()
                 gstimestamp = self.recorder.get_recorded_time()
+                self.end_cut = self.recorder.recorder.get_recording_clock_time() / NANO2MIL
+                # print self.end_cut
+                self.editpoints.append(self.end_cut)
                 self.logger.info('Resumed recording at {}'.format(gstimestamp / NANO2SEC))
                 self.logger.info('Paused for {}'.format((gstimestamp - self.last_pause_timestamp) / NANO2SEC))
                 self.total_pause_duration += gstimestamp - self.last_pause_timestamp
@@ -348,6 +390,29 @@ class QRCodeScanner():
         self.pipeline = pipeline
         self.bins = bins
 
+    def transform_pause_to_smil_points(self, mp_end):
+        editpoints = sorted(self.editpoints)
+        # if only one point and its at or before the beginning, safely assume the whole thing is cut
+        if len(self.editpoints) == 1 and self.editpoints[0] <= 0:
+            return [0, 1000]
+
+        # if the first editpoint it less than zero, remove it and make it zero (as opencast SMIL may not like negatives)
+        if editpoints[0] < 0:
+            editpoints.pop(0)
+        else:
+            editpoints.append(0)
+        # sort the points again so the zero is first in the list
+        adjust_editpoints = sorted(editpoints)
+        # if the qrcode is at or past the end time, remove the point
+        if adjust_editpoints[-1] >= mp_end:
+            adjust_editpoints.pop(-1)
+        # if the length of the edit list is odd we need to add the end time to save that section
+        if len(adjust_editpoints) & 1:
+            adjust_editpoints.append(mp_end)
+            # self.logger.debug('adjust_editpoints')
+            # print adjust_editpoints
+        return adjust_editpoints
+
     def qrcode_update_mediapackage(self, sender, mpURI):
         """
         Optional updating of Mediapackage 'org.opencastproject.capture.agent.properties' file with QR code edit points.
@@ -359,21 +424,24 @@ class QRCodeScanner():
             occap = mp.getOCCaptureAgentProperties()
 
             if len(self.editpoints):
+                # Adjustments to the edit list to get the points to keep rather than cut
+                mp_end = mp.getDuration()
+                adjust_editpoints = self.transform_pause_to_smil_points(mp_end)
                 if self.add_edits:
                     # self.logger.debug('Adding WF Edit parameters')
                     # flag that we want the workflow to edit our mediapackage
                     occap[WORKFLOW_CONFIG + '.editor'] = 'true'
 
-                    editpoints_str = ','.join(map(str, self.editpoints))
+                    editpoints_str = ','.join(map(str, adjust_editpoints))
                     occap[WORKFLOW_CONFIG + '.qrcEditpoints'] = editpoints_str
-                    occap[WORKFLOW_CONFIG + '.qrcNEditpoints'] = len(self.editpoints)
+                    occap[WORKFLOW_CONFIG + '.qrcNEditpoints'] = len(adjust_editpoints)
 
                 if self.trimhold:
                     # self.logger.debug('Forcing WF trimHold')
                     occap[WORKFLOW_CONFIG + '.trimHold'] = 'true'
 
-                if self.add_smil:
-                    self.create_smil(mp, occap)
+                if self.add_smil and self.edit_mode == 'opencast':
+                    self.create_smil(mp, adjust_editpoints, mp_end)
 
             occap_list = []
             for prpt, value in occap.items():
@@ -384,9 +452,23 @@ class QRCodeScanner():
             mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties',
                                      'org.opencastproject.capture.agent.properties')
 
-    def create_smil(self, mp, occap):
-        # TODO: call smil service
-        self.logger.info('Create SMIL - disabled')
+    def create_smil(self, mp, editpoints, mp_duration):
+        self.logger.info('Create SMIL')
+        has_presentation = 'false'
+        has_presenter = 'false'
+        mp_uri = mp.getURI()
+        if mp.getTracks(mimetype='video/avi', flavor='presentation/source'):
+            has_presentation = 'true'
+        if mp.getTracks(mimetype='video/avi', flavor='presenter/source'):
+            has_presenter = 'true'
+        outfile = mp_uri + '/' + 'qrcode-smil.xml'
+        smil_script = get_script_path('create-smil-fromWorkflow.sh')
+        edits = ';'.join(map(str, editpoints))
+        mp_id = mp.getIdentifier()
+        subprocess.call([smil_script, mp_id, outfile, has_presenter, has_presentation, "false", str(mp_duration), edits])
+        self.catalog = mediapackage.Catalog(uri=outfile, flavor="smil/cutting",
+                                            mimetype="text/xml", tags=["archive"])
+        mp.add(self.catalog)
 
     def write_pause_state(self, state):
         if state:
