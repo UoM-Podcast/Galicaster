@@ -24,15 +24,18 @@
 # import calendar
 import cStringIO
 import requests
+from requests.auth import HTTPDigestAuth
 # import socket
 from threading import Event, Thread
 import time
 import uuid
+from random import randint
 
 from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from MeteorClient import MeteorClient
 import pyscreenshot as ImageGrab
 from PIL import Image
+from io import BytesIO
 
 from galicaster.core import context
 
@@ -75,6 +78,7 @@ class DDP(Thread):
         self.store_audio = conf.get_boolean('ddp', 'store_audio')
         self.screenshot_file = conf.get('ddp', 'existing_screenshot')
         self.high_quality = conf.get_boolean('ddp', 'hq_snapshot')
+        self.support_group = conf.get('ddp', 'support_group')
         self.paused = False
         self.recording = False
         self.currentMediaPackage = None
@@ -83,9 +87,9 @@ class DDP(Thread):
         screen = Gdk.Screen.get_default()
         self._screen_width = screen.get_width()
         self._screen_height = screen.get_height()
-        self.cardindex = None
-        self.cam_uri = '/view/viewer_index.shtml'
-        self.support_group = conf.get('ddp', 'support_group')
+        self.cam_snapshot = conf.get('ddp', 'cam_snapshot_url')
+        self.cam_auth_user = conf.get('ddp', 'cam_auth_user')
+        self.cam_auth_pass = conf.get('ddp', 'cam_auth_pass')
         cam_available = conf.get(
             'ddp',
             'cam_available') or 0
@@ -119,8 +123,9 @@ class DDP(Thread):
 
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
-        dispatcher.connect('timer-short', self.update_vu)
+        dispatcher.connect('timer-long', self.update_vu)
         dispatcher.connect('timer-short', self.heartbeat)
+        dispatcher.connect('recorder-ready', self.add_inputs)
         dispatcher.connect('recorder-started', self.on_start_recording)
         dispatcher.connect('recorder-stopped', self.on_stop_recording)
         dispatcher.connect('recorder-status', self.on_rec_status_update)
@@ -129,11 +134,13 @@ class DDP(Thread):
         self.connect()
 
     def connect(self):
-        if not self.has_disconnected:
-            try:
-                self.client.connect()
-            except Exception:
-                logger.warn('DDP connection failed')
+        # if not self.has_disconnected:
+        logger.info('Trying to connect to meteor')
+        try:
+            self.client.connect()
+        except Exception as e:
+            logger.debug(e)
+            logger.warn('DDP connection failed')
 
     def update(self, collection, query, update):
         if self.client.connected and self.subscribedTo('GalicasterControl'):
@@ -163,7 +170,7 @@ class DDP(Thread):
 
     def heartbeat(self, element):
         if self.client.connected:
-            self.update_images()
+            self.update_images(randint(0, 9))
         else:
             self.connect()
 
@@ -197,10 +204,10 @@ class DDP(Thread):
                     'recording': self.recording
                 }
             })
-        self.update_images(1.5)
+        # self.update_images(1.5)
 
     def on_init(self, data):
-        self.update_images(1.5)
+        self.update_images(randint(0, 9))
 
     def update_images(self, delay=0.0):
         worker = Thread(target=self._update_images, args=(delay,))
@@ -210,27 +217,34 @@ class DDP(Thread):
         time.sleep(delay)
         files = {}
 
-        if not self.screenshot_file:
-            # take a screenshot with pyscreenshot
-            im = ImageGrab.grab(bbox=(0, 0, self._screen_width, self._screen_height), backend='imagemagick')
-        else:
-            try:
-                # used if screenshot already exists
-                im = Image.open(self.screenshot_file)
-            except IOError as e:
-                logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
-                return
-        output = cStringIO.StringIO()
+        # take a screenshot with pyscreenshot
+        im1 = ImageGrab.grab(bbox=(0, 0, self._screen_width, self._screen_height), backend='imagemagick')
+        try:
+            # used if screenshot already exists
+            response = requests.get(self.cam_snapshot, auth=HTTPDigestAuth(self.cam_auth_user, self.cam_auth_pass))
+            im2 = Image.open(BytesIO(response.content))
+        except IOError as e:
+            print e
+            logger.warn("Unable to open screenshot file {0}".format(self.screenshot_file))
+            return
+        output1 = cStringIO.StringIO()
+        output2 = cStringIO.StringIO()
         image_format = 'JPEG'
         if not self.high_quality:
-            im.thumbnail((640, 360), Image.ANTIALIAS)
+            im1.thumbnail((640, 360), Image.ANTIALIAS)
+            im2.thumbnail((640, 360), Image.ANTIALIAS)
         else:
             image_format = 'PNG'
 
-        if im.mode != "RGB":
-            im = im.convert("RGB")
-        im.save(output, format=image_format) # to reduce jpeg size use param: optimize=True
-        files['galicaster'] = ('galicaster.jpg', output.getvalue(),
+        if im1.mode != "RGB":
+            im = im1.convert("RGB")
+        if im2.mode != "RGB":
+            im2 = im2.convert("RGB")
+        im1.save(output1, format=image_format) # to reduce jpeg size use param: optimize=True
+        im2.save(output2, format=image_format)  # to reduce jpeg size use param: optimize=True
+        files['galicaster'] = ('galicaster.jpg', output1.getvalue(),
+                               'image/jpeg')
+        files['livestream'] = ('livestream.jpg', output2.getvalue(),
                                'image/jpeg')
         try:
             # add verify=False for testing self signed certs
@@ -263,7 +277,8 @@ class DDP(Thread):
         else:
             is_paused = False
         if is_paused:
-            self.update_images(.75)
+            # self.update_images(.75)
+            pass
         if self.paused == is_paused:
             self.update(
                 'rooms', {
@@ -272,7 +287,8 @@ class DDP(Thread):
                         'paused': is_paused}})
             self.paused = is_paused
         if data == 'recording':
-            self.update_images(.75)
+            # self.update_images(.75)
+            pass
 
     def media_package_metadata(self, id):
         mp = context.get('recorder').current_mediapackage
@@ -312,12 +328,8 @@ class DDP(Thread):
                 'paused': self.paused,
                 'recording': self.recording,
                 'heartbeat': int(time.time()),
+                'camAvailable': self.cam_available,
                 'supportGroup': self.support_group,
-                'camAvailable': {
-                    'available': self.cam_available,
-                    'uri': self.cam_uri
-                },
-                'inputs': self.inputs(),
                 'stream': {
                     'host': self._stream_host,
                     'port': self._audiostream_port,
@@ -354,19 +366,32 @@ class DDP(Thread):
                 data['_id'] = self.id
                 self.insert('rooms', data)
 
+    def add_inputs(self, signal=None):
+        self.update(
+            'rooms', {
+                '_id': self.id}, {
+                '$set': {
+                    'inputs': self.inputs()}})
+
     def inputs(self):
-        inputs = {
-            'presentations': ['Presentation']
-        }
-        inputs['cameras'] = []
-        labels = conf.get('ddp', 'cam_labels')
-        cam_labels = []
-        if labels:
-            cam_labels = [l.strip() for l in labels.split(',')]
-        for i in range(0, self.cam_available):
-            label = cam_labels[i] if i < len(
-                cam_labels) else "Camera %d" % (i + 1)
-            inputs['cameras'].append(label)
+        recorder = context.get_recorder()
+        try:
+            bins = recorder.recorder.bins
+        except AttributeError as e:
+            print e
+        inputs = {}
+        capture_devices = []
+        camera_devices = []
+        for name, bin in bins.iteritems():
+            # only send video devices
+            if not bin.options['type'] == 'audio/microphone':
+                if bin.options['type'] == 'video/presentation':
+                    capture_devices.append(name)
+                if bin.options['type'] == 'video/camera':
+                    camera_devices.append(name)
+        inputs['presentations'] = capture_devices
+        inputs['cameras'] = camera_devices
+        print inputs
         return inputs
 
     def on_added(self, collection, id, fields):
@@ -420,7 +445,8 @@ class DDP(Thread):
                 params=[
                     self.id],
                 callback=self.subscription_callback)
-        except Exception:
+        except Exception as e:
+            logger.debug(e)
             logger.warn('DDP subscription failed')
 
     def on_closed(self, code, reason):

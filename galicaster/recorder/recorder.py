@@ -51,6 +51,8 @@ class Recorder(object):
         self.restart = False
 #        self.mute = False
         self.mute_status = {"input":{},"preview":{}}
+        self.audio_chan1 = 0.0
+        self.audio_chan2 = 0.0
         self.error = False
         self.is_recording = False
         self.__start_record_time = -1
@@ -114,6 +116,14 @@ class Recorder(object):
     def get_time(self):
         return self.pipeline.get_clock().get_time()
 
+    def get_recording_clock_time(self):
+        if self.__start_record_time == -1:
+            return 0
+
+        status = self.get_status()[1]
+        if status == Gst.State.NULL:
+            return self.__duration
+        return self.__query_position() - self.__start_record_time
 
     def get_recorded_time(self):
         """Get recorded time in usec"""
@@ -256,10 +266,9 @@ class Recorder(object):
                 logger.debug('EOS message successfully received')
             elif msg.type == Gst.MessageType.ERROR:
                 err, debug = msg.parse_error()
-                logger.error("Error received from element {}: {}".format(msg.sr.get_name(), err))
+                logger.error("Error received from element {}: {}".format(msg, err))
                 logger.debug("Debugging information: {}".format(debug))
                 self.__emit_error('Received ERROR message from pipeline', '', stop=False)
-
         self.pipeline.set_state(Gst.State.NULL)
 
 
@@ -315,7 +324,8 @@ class Recorder(object):
         else:
             stereo = False
             valor2 = valor
-
+        self.audio_chan1 = valor
+        self.audio_chan2 = valor2
         self.dispatcher.emit("recorder-vumeter", valor, valor2, stereo)
 
 

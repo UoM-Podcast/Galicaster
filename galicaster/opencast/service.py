@@ -189,7 +189,7 @@ class OCService(object):
             self.__set_opencast_up()
             self.jobs.put((self.set_state, ()))
             self.jobs.put((self.process_ical, ()))
-            self.jobs.put((self.update_series,()))
+            # self.jobs.put((self.update_series,()))
             if self.conf.tracks_visible_to_opencast():
                 self.logger.info('Be careful using profiles and opencast scheduler')
         except Exception as exc:
@@ -260,7 +260,7 @@ class OCService(object):
         if not self.scheduler.mp_rec:
             return
         mp = self.repo.get(self.scheduler.mp_rec)
-
+        self.t_stop = mp.getDuration()
         if mp and not mp.manual:
             now_is_recording_time = (mp.getDate() < datetime.datetime.utcnow() and mp.getDate() + datetime.timedelta(seconds=(self.t_stop/1000)) > datetime.datetime.utcnow()) or (mp.getDate() - datetime.timedelta(seconds=20) < datetime.datetime.utcnow())
             if now_is_recording_time:
