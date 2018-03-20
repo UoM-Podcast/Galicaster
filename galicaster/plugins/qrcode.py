@@ -84,8 +84,9 @@ def init():
         notify_email = conf.get_boolean('qrcode', 'notify_email') or False
         hold_early = conf.get_int('qrcode', 'hold_early') or 0  # secs
         edit_mode = conf.get('qrcode', 'edit_mode') or 'direct'
+        blacklist_users = conf.get('qrcode', 'blacklist_users') or None
         qr = QRCodeScanner(mode, symbols, hold_timeout, hold_early, edit_mode, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
-                           finish_show_time, notify_email, context.get_logger())
+                           finish_show_time, notify_email, blacklist_users, context.get_logger())
 
         dispatcher = context.get_dispatcher()
         dispatcher.connect('recorder-ready', qr.qrcode_add_pipeline)
@@ -104,7 +105,7 @@ def init():
 
 class QRCodeScanner():
     def __init__(self, mode, symbols, hold_timeout, hold_early, edit_mode, rescale, drop_frames, buffers, ignore_bins, finish_timeframe,
-                 finish_show_time, notify_email, logger=None):
+                 finish_show_time, notify_email, blacklist, logger=None):
         self.symbol_start = symbols['start']
         self.symbol_stop = symbols['stop']
         self.symbol_hold = symbols['hold']
@@ -145,6 +146,11 @@ class QRCodeScanner():
         self.finish_show_time = finish_show_time
         self.notify_email = notify_email
         self.last_timeout = None
+        if blacklist:
+            self.blacklist_list = blacklist.split(',')
+        else:
+            self.blacklist_list = []
+        self.blacklisting_on = False
         self.opencast_edit_devices = ['camera', 'Camera', 'webcam', 'Webcam', 'RTPcamera', 'rtpcamera', 'rtpsource', 'RTPsource', 'CameraSource', 'camerasource']
 
     # set additional parameters
@@ -190,6 +196,15 @@ class QRCodeScanner():
         if current_mp.manual:
             if pausable == False:
                 self.edit_mode = 'opencast'
+
+        # checking if blacklisted user
+        if current_mp:
+            email_list = self.get_emails(current_mp)
+            if [eb for eb in email_list if eb in self.blacklist_list]:
+                self.blacklisting_on = True
+                self.logger.info('QRcode disabled for: {}'.format(email_list))
+            else:
+                self.blacklisting_on = False
         self.sync_msg_handler = self.dispatcher.connect('recorder-message-element', self.qrcode_on_sync_message)
 
     def qrcode_disconnect_to_sync_message(self, sender, mpurl):
@@ -238,7 +253,8 @@ class QRCodeScanner():
                     if not self.recording_paused:
                         # self.logger.debug('PAUSING')
                         if self.edit_mode == 'direct':
-                            self.recorder.pause()
+                            if not self.blacklisting_on:
+                                self.recorder.pause()
                         self.write_pause_state(True)
                         # set UI state so that MP duration is calculated correctly
                         self.logger.info('Paused recording at {}'.format((timestamp) / NANO2SEC))
@@ -282,7 +298,8 @@ class QRCodeScanner():
                     # self.logger.debug('RESUMING')
                     self.logger.info('Resumed recording at {}'.format(timestamp))
                     self.recording_paused = False
-                    self.recorder.resume()
+                    if not self.blacklisting_on:
+                        self.recorder.resume()
 
             # stop recording early on qrcode, requires scheduled recording,
             # <= user defined period (min) before ending and user defined period (sec) of qrcode showing
@@ -305,7 +322,8 @@ class QRCodeScanner():
                             self.finish_timeout_end = None
                             self.finish_timeout_start = None
                             # this function does not like to be in another thread!
-                            self.recorder.stop()
+                            if not self.blacklisting_on:
+                                self.recorder.stop()
 
     def has_hold_timed_out(self, recorder, timestamp):
         # self.logger.debug( '...timer testing {} {} {}'.format(timestamp, self.hold_timestamp, self.hold_timestamp-timestamp)
@@ -317,7 +335,8 @@ class QRCodeScanner():
             # Check if the 'recording' has been ended
             if self.recorder.is_recording:
                 if self.edit_mode == 'direct':
-                    self.recorder.resume()
+                    if not self.blacklisting_on:
+                     self.recorder.resume()
                 # old way for getting recording start time
                 # clock = recorder.pipeline.get_clock()
                 # gstimestamp = clock.get_time() - recorder.pipeline.get_base_time()
@@ -479,11 +498,16 @@ class QRCodeScanner():
         else:
             remove(self.pause_state_file)
 
-    def send_email(self, mp):
-        # send email to email address(s) listed in the mediapackage
+    def get_emails(self, mp):
         occap = mp.getOCCaptureAgentProperties()
         mp_emailadd = occap[WORKFLOW_CONFIG + '.emailAddresses']
         email_list = mp_emailadd.split(',')
+        return email_list
+
+    def send_email(self, mp):
+        # send email to email address(s) listed in the mediapackage
+        occap = mp.getOCCaptureAgentProperties()
+        email_list = self.get_emails(mp)
         subject = "Podcast stopped early"
         message = """
 Hi, This is an automated email.
