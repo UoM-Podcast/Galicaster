@@ -113,7 +113,6 @@ class PopUp(Gtk.Widget):
         global user_list
         self.user_list = user_list
         self.last_user_list = last_users
-        print self.last_user_list
         # Specific glade modifications
         if message == OPERATIONS:
 
@@ -158,7 +157,6 @@ class PopUp(Gtk.Widget):
                 if gtk_obj:
                     gtk_obj.show()
             self.gui.get_object("quitbutton").connect("clicked", context.get_mainwindow().do_quit)
-            print self.last_user_list
             self.gui.get_object("reloaduserbutton").connect("clicked", self.reload_users, self.last_user_list)
         # Display dialog
         # FIXME shading doesnt work correctly

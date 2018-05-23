@@ -29,10 +29,11 @@ WORKFLOW_CONFIG = 'org.opencastproject.workflow.config'
 
 
 def init():
-    global conf, logger, user_list
+    global conf, logger, user_list, ocservice
     dispatcher = context.get_dispatcher()
     logger = context.get_logger()
     conf = context.get_conf()
+    ocservice = context.get_ocservice()
     dispatcher.connect('init', show_msg)
     dispatcher.connect('recorder-stopped', update_mediapackage_nfcuserlist)
 
@@ -134,7 +135,8 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
     for i in message.user_list:
         removed_nine = i.lstrip('9')[:-1]
         user_list.append(removed_nine.lstrip('0'))
-    user_list_str = ','.join(map(str, user_list))
+    user_list_fmt = list(set(user_list))
+    user_list_str = ','.join(map(str, user_list_fmt))
     # add IDs to the org.opencast.properties file
     recorder = context.get_recorder()
     mp = recorder.current_mediapackage
@@ -148,6 +150,11 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
 
     mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties',
                              'org.opencastproject.capture.agent.properties')
+
+    # add ids to workflow acls
+    current_wf_acl = ocservice.get_wfparams('aclRoles')
+    ocservice.change_wfparams('aclRoles', user_list_str + ',' + current_wf_acl)
+    ocservice.change_wfparams('spotIDs', user_list_str)
     # re lock once stopped
     text = {"title": _("Locked")}
 
@@ -155,7 +162,6 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
     last_user_list = []
     for i in message.user_list:
         last_user_list.append(i)
-    print last_user_list
     lock(None, text, show, last_user_list)
 
     # print user_list
