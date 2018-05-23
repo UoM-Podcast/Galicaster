@@ -15,6 +15,7 @@ import os
 import tempfile
 import Queue
 import json
+import xml.etree.ElementTree
 
 from datetime import datetime
 
@@ -103,6 +104,8 @@ class Worker(object):
         self.t.start()
 
         self.dispatcher.connect('timer-nightly', self.exec_nightly)
+
+        self.workflowInstanceId = None
 
     def get_all_job_types(self):
         """Gets all the possible mediapackage operations.
@@ -318,7 +321,11 @@ class Worker(object):
         self._export_to_zip(mp, params={"location" : ifile, "is_action": False})
 
         if mp.manual:
-            self.oc_client.ingest(ifile.name, mp.getIdentifier(), workflow=workflow, workflow_instance=None, workflow_parameters=workflow_parameters)
+            ingest_response = self.oc_client.ingest(ifile.name, mp.getIdentifier(), workflow=workflow, workflow_instance=None, workflow_parameters=workflow_parameters)
+            e = xml.etree.ElementTree.fromstring(ingest_response)
+            for elem in e.getiterator():
+                if elem.tag == '{http://workflow.opencastproject.org}workflow':
+                    self.workflowInstanceId = elem.attrib['id']
         else:
             if not workflow:
                 properties = mp.getOCCaptureAgentProperties()
@@ -476,7 +483,7 @@ class Worker(object):
     def operation_success(self, mp, OP_CODE):
         self.logger.info("Finalized {} for MP {}".format(JOB_NAMES[OP_CODE], mp.getIdentifier()))
         mp.setOpStatus(OP_CODE, mediapackage.OP_DONE)
-        self.dispatcher.emit('operation-stopped', OP_CODE, mp, True, None)
+        self.dispatcher.emit('operation-stopped', OP_CODE, mp, True, self.workflowInstanceId)
         self.repo.update(mp)
 
 
