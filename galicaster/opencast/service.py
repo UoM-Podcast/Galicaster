@@ -266,3 +266,12 @@ class OCService(object):
             if now_is_recording_time:
                 self.scheduler.mp_rec = None
                 self.__set_recording_state(mp, 'capture_error')
+
+    def get_wfparams(self, param_key):
+        return self.client.workflow_parameters[param_key]
+
+
+    def change_wfparams(self, param_key, param_value):
+        # will add or append a new workflow parameter to the list the opencast client has from configuration
+        # new key, value pairs will be added existing keys, values will be overwitten (python dict behavior)
+        self.client.workflow_parameters[param_key] = param_value
