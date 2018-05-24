@@ -221,7 +221,7 @@ class DDP(Thread):
                 if bin.options['type'] == 'video/camera':
                     location = bin.options['location']
                     # check if stream is already running
-                    response = requests.get("http://{}/dash/{}".format(self.cam_rtmp_hostname, self.displayName + '_' + name))
+                    response = requests.get("http://{}/dash/{}/index.mpd".format(self.cam_rtmp_hostname, self.displayName + '_' + name))
                     if response.status_code == requests.codes.ok:
                         return
                     stream_cmd = "ffmpeg -re -f alsa -ac 2 -thread_queue_size 512 -i pulse -f lavfi -i anullsrc -thread_queue_size 512 -rtsp_transport tcp -i " \
