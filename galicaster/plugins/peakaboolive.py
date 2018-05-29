@@ -224,11 +224,11 @@ class DDP(Thread):
                     response = requests.get("http://{}/dash/{}/index.mpd".format(self.cam_rtmp_hostname, self.displayName + '_' + name))
                     if response.status_code == requests.codes.ok:
                         return
-                    stream_cmd = "ffmpeg -re -f alsa -ac 2 -thread_queue_size 512 -i pulse -f lavfi -i anullsrc -thread_queue_size 512 -rtsp_transport tcp -i " \
+                    stream_cmd = "ffmpeg -re -f lavfi -i anullsrc -thread_queue_size 512 -rtsp_transport tcp -i " \
                                  "{} -tune " \
                                  "zerolatency -c:v libx264 -pix_fmt yuv420p -profile:v baseline -preset ultrafast -tune zerolatency " \
                                  "-vsync cfr -x264-params 'nal-hrd=cbr' -b:v 500k -minrate 500k -maxrate 500k -bufsize 1000k -g 60 -s " \
-                                 "640x360 -c:a libmp3lame -ar 44100 -f " \
+                                 "640x360 -c:a aac -map 1:v:0 -map 1:a:0 -f " \
                                  "flv rtmp://{}/dash/{}".format(location, self.cam_rtmp_hostname, self.displayName + '_' + name)
                     subprocess.Popen(stream_cmd, shell=True)
                 self.stream = True
