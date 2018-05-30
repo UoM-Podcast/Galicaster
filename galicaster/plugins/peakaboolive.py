@@ -227,8 +227,8 @@ class DDP(Thread):
                     stream_cmd = "ffmpeg -re -f lavfi -i anullsrc -thread_queue_size 512 -rtsp_transport tcp -i " \
                                  "{} -tune " \
                                  "zerolatency -c:v libx264 -pix_fmt yuv420p -profile:v baseline -preset ultrafast -tune zerolatency " \
-                                 "-vsync cfr -x264-params 'nal-hrd=cbr' -b:v 500k -minrate 500k -maxrate 500k -bufsize 1000k -g 60 -s " \
-                                 "640x360 -c:a aac -map 1:v:0 -map 1:a:0 -f " \
+                                 "-vsync cfr -x264-params 'nal-hrd=cbr' -b:v 1500k -minrate 1500k -maxrate 1500k -bufsize 3000k -g 60 -s " \
+                                 "1280x720 -c:a aac -map 1:v:0 -map 1:a:0 -f " \
                                  "flv rtmp://{}/dash/{}".format(location, self.cam_rtmp_hostname, self.displayName + '_' + name)
                     subprocess.Popen(stream_cmd, shell=True)
                 self.stream = True
