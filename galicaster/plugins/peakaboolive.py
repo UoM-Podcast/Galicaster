@@ -221,7 +221,10 @@ class DDP(Thread):
                 if bin.options['type'] == 'video/camera':
                     location = bin.options['location']
                     # check if stream is already running
-                    response = requests.get("http://{}/dash/{}/index.mpd".format(self.cam_rtmp_hostname, self.displayName + '_' + name))
+                    try:
+                        response = requests.get("http://{}/dash/{}/index.mpd".format(self.cam_rtmp_hostname, self.displayName + '_' + name))
+                    except Exception as e:
+                        return
                     if response.status_code == requests.codes.ok:
                         return
                     stream_cmd = "ffmpeg -re -f lavfi -i anullsrc -thread_queue_size 512 -rtsp_transport tcp -i " \
@@ -404,14 +407,15 @@ class DDP(Thread):
 
         self.inputs_sources = {}
         capture_devices = []
-        camera_devices = []
+        camera_devices = {}
         for name, bin in self.bins.iteritems():
             # only send video devices
             if not bin.options['type'] == 'audio/microphone':
                 if bin.options['type'] == 'video/presentation':
                     capture_devices.append(name)
                 if bin.options['type'] == 'video/camera':
-                    camera_devices.append(name)
+                    cam_ip = bin.options['location'].split('@')[1].split(':')[0]
+                    camera_devices[name] = cam_ip
         self.inputs_sources['presentations'] = capture_devices
         self.inputs_sources['cameras'] = camera_devices
         return self.inputs_sources
