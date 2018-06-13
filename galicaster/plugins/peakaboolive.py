@@ -44,6 +44,7 @@ from PIL import Image
 from io import BytesIO
 from galicaster.core import context
 import galicaster.utils.camctrl_onvif_interface as camera
+import galicaster.utils.pyvapix as vapix
 
 conf = context.get_conf()
 dispatcher = context.get_dispatcher()
@@ -104,6 +105,9 @@ class DDP(Thread):
         self.ptzhome = False
         self.bins = {}
         self.stream = False
+        self.last_cam_ip = None
+        self.ptz_sp_plus = '50'
+        self.ptz_sp_minus = '-50'
 
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
@@ -431,55 +435,96 @@ class DDP(Thread):
         if context.get('recorder').is_recording() != me['recording']:
             self.set_recording(me)
         # ptz camera commands
+        ptz_prefix = 'peakaboo-ptz-'
+        ptz_suffix = '_Camera_1'
+        cam_ip = self.last_cam_ip
         if not self.ptzmovement:
-            if me['ptzmove'] == 'peakaboo-ptz-left-up-button':
+            # determine which camera the command is for
+            # FIXME sends 'False when not moving so stop is unknown right now
+            if me['ptzmove']:
+                for name, bin in self.bins.iteritems():
+                    if bin.options['type'] == 'video/camera':
+                        if me['ptzmove'].split('_')[2] == name.split('_')[1]:
+                            # print name
+                            cam_ip = str(bin.options['location'].split('@')[1].split(':')[0]).strip()
+                            # print cam_ip
+                            self.last_cam_ip = cam_ip
+                            ptz_suffix = '_' + name
+
+
+            if me['ptzmove'] == ptz_prefix + 'left-up-button' + ptz_suffix:
                 print 'move left up!'
+                self.send_ptz(cam_ip, self.ptz_sp_minus, self.ptz_sp_plus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-up-button':
+            if me['ptzmove'] == ptz_prefix + 'up-button' + ptz_suffix:
                 print 'move up!'
+                self.send_ptz(cam_ip, '0', self.ptz_sp_plus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-right-up-button':
+            if me['ptzmove'] == ptz_prefix + 'right-up-button' + ptz_suffix:
                 print 'move right up!'
+                self.send_ptz(cam_ip, self.ptz_sp_plus, self.ptz_sp_plus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-left-button':
+            if me['ptzmove'] == ptz_prefix + 'left-button' + ptz_suffix:
                 print 'move left!'
+                self.send_ptz(cam_ip, self.ptz_sp_minus, '0')
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-right-button':
+            if me['ptzmove'] == ptz_prefix + 'right-button' + ptz_suffix:
                 print 'move right!'
+                self.send_ptz(cam_ip, self.ptz_sp_plus, '0')
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-left-down-button':
+            if me['ptzmove'] == ptz_prefix + 'left-down-button' + ptz_suffix:
                 print 'move left down!'
+                self.send_ptz(cam_ip, self.ptz_sp_minus, self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-down-button':
+            if me['ptzmove'] == ptz_prefix + 'down-button' + ptz_suffix:
                 print 'move down!'
+                self.send_ptz(cam_ip, '0', self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-right-down-button':
+            if me['ptzmove'] == ptz_prefix + 'right-down-button' + ptz_suffix:
                 print 'move right down!'
+                self.send_ptz(cam_ip, self.ptz_sp_plus, self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-zoom-in-button':
+            if me['ptzmove'] == ptz_prefix + 'zoom-in-button' + ptz_suffix:
                 print 'zoom in'
+                self.send_ptzzoom(cam_ip, self.ptz_sp_plus)
                 self.ptzmovement = True
                 self.ptzhome = False
-            if me['ptzmove'] == 'peakaboo-ptz-zoom-out-button':
+            if me['ptzmove'] == ptz_prefix + 'zoom-out-button' + ptz_suffix:
                 print 'zoom out'
+                self.send_ptzzoom(cam_ip, self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
         if not self.ptzhome:
-            if me['ptzmove'] == 'peakaboo-ptz-home-button':
+            if me['ptzmove'] == ptz_prefix + 'home-button' + ptz_suffix:
                 print 'move home position!'
+                self.send_ptzhome(cam_ip, 'home')
                 self.ptzhome = True
         if self.ptzmovement:
             if me['ptzmove'] == False:
                 print 'stop moving!'
+                self.send_ptz(cam_ip, '0', '0')
+                self.send_ptzzoom(cam_ip, '0')
                 self.ptzmovement = False
+
+    def send_ptz(self, ipaddress, cmd1, cmd2):
+        # send ptz commands to the specified camera
+        vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).continuouspantiltmove(cmd1,cmd2)
+
+    def send_ptzhome(self, ipaddress, cmd1):
+        # send absolute ptz commands to the specified camera
+        vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).move(cmd1)
+
+    def send_ptzzoom(self, ipaddress, cmd1):
+        # send ptz zoom commands to the specified camera
+        vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).continuouszoommove(cmd1)
 
     def on_removed(self, collection, id):
         self.on_subscribed(None)
