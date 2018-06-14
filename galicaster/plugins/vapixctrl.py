@@ -82,17 +82,13 @@ def init():
     logger = context.get_logger()
     recorder = context.get_recorder()
 
-    backend = config.get(BACKEND)
-
-    if backend == "vapix":
-        # global cam
+    try:
         global axis_http
         import galicaster.utils.pyvapix as camera
         import galicaster.utils.camctrl_http_interface as axis_web
         # connect to the camera
         ip = config.get(IPADDRESS)
-        username = config.get(USERNAME)
-        password = config.get(PASSWORD)
+
         # Initiate axis web UI
         web_username = config.get('web_username')
         web_password = config.get('web_password')
@@ -101,9 +97,8 @@ def init():
         # cam = camera.Vapix(ip, username, password)
         # initiate the vapix user interface
         dispatcher.connect("init", init_vapix_ui)
-    else:
-        logger.warn("WARNING: You have to choose a backend in the config file before starting Galicaster, otherwise the cameracontrol plugin does not work.")
-        raise RuntimeError("No backend for the cameracontrol plugin defined.") 
+    except Exception as e:
+        logger.error(e)
     logger.info("Camera connected.")
 
 
@@ -120,17 +115,6 @@ def init_vapix_ui(element):
     dispatcher.connect("recorder-stopped", vapix.on_stop_recording)
 
     recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
-
-    # load css file
-    # css = Gtk.CssProvider()
-    # css.load_from_path(get_ui_path("camctrl.css"))
-    #
-    # Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default())
-    # Gtk.StyleContext.add_provider_for_screen(
-    #     Gdk.Screen.get_default(),
-    #     css,
-    #     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    # )
 
     # load glade file
     builder = Gtk.Builder()
@@ -226,15 +210,7 @@ def init_vapix_ui(element):
     for name, bin in bins.iteritems():
         if bin.options['type'] == 'video/camera':
             camlist.append(name, name)
-            # if me['ptzmove'].split('_')[2] == name.split('_')[1]:
-            #     # print name
-            #     cam_ip = str(bin.options['location'].split('@')[1].split(':')[0]).strip()
-            #     # print cam_ip
-            #     self.last_cam_ip = cam_ip
 
-    # for cams in ['cam1', 'cam2']:
-    #
-    #     camlist.append(cams, cams)
     camlist.set_active(0)
     camlist.connect("changed", vapix.change_cam)
 
