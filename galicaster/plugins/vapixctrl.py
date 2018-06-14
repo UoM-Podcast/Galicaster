@@ -22,6 +22,7 @@ from gi.repository import Gtk, Gdk, GdkPixbuf, GObject, Pango
 from galicaster.core import context
 from galicaster.classui import get_ui_path
 from galicaster.classui import get_image_path
+import galicaster.utils.pyvapix as vapix
 
 
 # DEFAULTS
@@ -79,11 +80,12 @@ def init():
     dispatcher = context.get_dispatcher()
     repo = context.get_repository()
     logger = context.get_logger()
+    recorder = context.get_recorder()
 
     backend = config.get(BACKEND)
 
     if backend == "vapix":
-        global cam
+        # global cam
         global axis_http
         import galicaster.utils.pyvapix as camera
         import galicaster.utils.camctrl_http_interface as axis_web
@@ -95,11 +97,8 @@ def init():
         web_username = config.get('web_username')
         web_password = config.get('web_password')
         axis_http = axis_web.AxisWeb(ip, web_username, web_password)
-        if config.get(PORT) is None:
-            port = DEFAULT_PORT
-        else:
-            port = config.get(PORT)
-        cam = camera.Vapix(ip, username, password)
+
+        # cam = camera.Vapix(ip, username, password)
         # initiate the vapix user interface
         dispatcher.connect("init", init_vapix_ui)
     else:
@@ -107,13 +106,14 @@ def init():
         raise RuntimeError("No backend for the cameracontrol plugin defined.") 
     logger.info("Camera connected.")
 
+
 def init_vapix_ui(element):
     """
     build the galicaster UI tab for the vapix controls
     :param element: 
     :return: 
     """
-    global recorder_ui, movescale, zoomscale, presetdelbutton, flybutton, builder, prefbutton, newpreset, movelabel, zoomlabel, res
+    global recorder_ui, movescale, zoomscale, presetdelbutton, flybutton, builder, prefbutton, newpreset, movelabel, zoomlabel, res, bins
 
     vapix = vapix_interface()
     dispatcher.connect("recorder-starting", vapix.on_start_recording)
@@ -214,6 +214,30 @@ def init_vapix_ui(element):
     button.add(get_stock_icon("zoomout"))
     button.connect("pressed", vapix.zoom_out)
     button.connect("released", vapix.stop_move)
+
+    # add cameras to a selection list
+    camlist = builder.get_object("comboboxtext1")
+
+    try:
+        bins = recorder.recorder.bins
+    except AttributeError as e:
+        print e
+
+    for name, bin in bins.iteritems():
+        if bin.options['type'] == 'video/camera':
+            camlist.append(name, name)
+            # if me['ptzmove'].split('_')[2] == name.split('_')[1]:
+            #     # print name
+            #     cam_ip = str(bin.options['location'].split('@')[1].split(':')[0]).strip()
+            #     # print cam_ip
+            #     self.last_cam_ip = cam_ip
+
+    # for cams in ['cam1', 'cam2']:
+    #
+    #     camlist.append(cams, cams)
+    camlist.set_active(0)
+    camlist.connect("changed", vapix.change_cam)
+
     #REMOVED
     # # presets
     # # presetlist = builder.get_object("preset_list")
@@ -262,83 +286,121 @@ def init_vapix_ui(element):
 
 
 class vapix_interface():
-    """
-    VAPIX PTZ controls interface from buttons
-    """
+
+    def __init__(self):
+        # set the default camera name from the camera profile names in the config
+        self.camera_names = []
+        self.camera_ips = []
+        self.camera_users = []
+        self.camera_passes = []
+        self.bins = {}
+        try:
+            self.bins = recorder.recorder.bins
+        except AttributeError as e:
+            print e
+
+        for name, bin in self.bins.iteritems():
+            if bin.options['type'] == 'video/camera':
+                self.camera_names.append(name)
+                self.camera_ips.append(str(bin.options['location'].split('@')[1].split(':')[0]).strip())
+                self.camera_users.append(str(bin.options['location'].split('@')[0].split(':')[1].split('//')[1]))
+                self.camera_passes.append(str(bin.options['location'].split('@')[0].split(':')[2]))
+        self.camera_name = self.camera_names[0]
+        self.camera_ip = self.camera_ips[0]
+        self.camera_user = self.camera_users[0]
+        self.camera_pass = self.camera_passes[0]
 
     # movement functions
     def move_left(self, button):
+        print self.camera_name
+        print self.camera_ip
+        print self.camera_user
+        print self.camera_pass
         logger.debug("I move left")
-        cam.continuouspantiltmove('-' + str(movescale.get_value() * 100), '0')
+        self.send_ptz('-' + str(movescale.get_value() * 100), '0')
         # presetlist.set_active(-1)
 
 
     def move_leftup(self, button):
         logger.debug("I move leftup")
-        cam.continuouspantiltmove('-' + str(movescale.get_value() * 100), str(movescale.get_value() * 100))
+        self.send_ptz('-' + str(movescale.get_value() * 100), str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def move_leftdown(self, button):
         logger.debug("I move leftdown")
-        cam.continuouspantiltmove('-' + str(movescale.get_value() * 100), '-' + str(movescale.get_value() * 100))
+        self.send_ptz('-' + str(movescale.get_value() * 100), '-' + str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def move_right(self, button):
         logger.debug("I move right")
-        cam.continuouspantiltmove(str(movescale.get_value() * 100), '0')
+        self.send_ptz(str(movescale.get_value() * 100), '0')
         # presetlist.set_active(-1)
 
 
     def move_rightup(self, button):
         logger.debug("I move rightup")
-        cam.continuouspantiltmove(str(movescale.get_value() * 100), str(movescale.get_value() * 100))
+        self.send_ptz(str(movescale.get_value() * 100), str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def move_rightdown(self, button):
         logger.debug("I move rightdown")
-        cam.continuouspantiltmove(str(movescale.get_value() * 100), '-' + str(movescale.get_value() * 100))
+        self.send_ptz(str(movescale.get_value() * 100), '-' + str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def move_up(self, button):
         logger.debug("I move up")
-        cam.continuouspantiltmove('0', str(movescale.get_value() * 100))
+        self.send_ptz('0', str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def move_down(self, button):
         logger.debug("I move down")
-        cam.continuouspantiltmove('0', '-' + str(movescale.get_value() * 100))
+        self.send_ptz('0', '-' + str(movescale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def stop_move(self, button):
         logger.debug("I make a break")
-        cam.stop()
-        cam.continuouszoommove('0')
+        vapix.Vapix(ip=self.camera_ip, username=self.camera_user, password=self.camera_pass).stop()
+        self.send_ptzzoom('0')
 
 
     def move_home(self, button):
         logger.debug("I move home")
-        cam.move('home')
+        self.send_ptzhome('home')
         # # presetlist.set_active_id("home")
 
 
     # zoom functions
     def zoom_in(self, button):
         logger.debug("zoom in")
-        cam.continuouszoommove(str(zoomscale.get_value() * 100))
+        self.send_ptzzoom(str(zoomscale.get_value() * 100))
         # presetlist.set_active(-1)
 
 
     def zoom_out(self, button):
         logger.debug("zoom out")
-        cam.continuouszoommove('-' + str(zoomscale.get_value() * 100))
+        self.send_ptzzoom('-' + str(zoomscale.get_value() * 100))
         # presetlist.set_active(-1)
 
+    #COMMAND EXECUTION
+    def send_ptz(self, cmd1, cmd2):
+        # send ptz commands to the specified camera
+        vapix.Vapix(ip=self.camera_ip, username=self.camera_user, password=self.camera_pass).continuouspantiltmove(cmd1,cmd2)
+
+    def send_ptzhome(self, cmd1):
+        # send absolute ptz commands to the specified camera
+        vapix.Vapix(ip=self.camera_ip, username=self.camera_user, password=self.camera_pass).move(cmd1)
+
+    def send_ptzzoom(self, cmd1):
+        # send ptz zoom commands to the specified camera
+        vapix.Vapix(ip=self.camera_ip, username=self.camera_user, password=self.camera_pass).continuouszoommove(cmd1)
+
+    # MOVING ZOOMING SPEEDS
     def set_zoom(self, zoomscale):
         zoomlabel.set_text("{0:.1f}".format(zoomscale.get_value()))
 
@@ -375,6 +437,17 @@ class vapix_interface():
 
         except Exception as e:
             logger.warn("Error accessing the IP camera on recording end. The recording may be incorrect! Error: ", e)
+
+    def change_cam(self, cam_option):
+        # changing which camea is used
+        self.camera_name = cam_option.get_active_text()
+        for name, bin in self.bins.iteritems():
+            if bin.options['type'] == 'video/camera':
+                if self.camera_name == name:
+                    self.camera_ip = str(bin.options['location'].split('@')[1].split(':')[0]).strip()
+                    self.camera_user = str(bin.options['location'].split('@')[0].split(':')[1].split('//')[1])
+                    self.camera_pass = str(bin.options['location'].split('@')[0].split(':')[2])
+
 
 def get_icon(imgname):
     size = res * 56
