@@ -2,6 +2,7 @@ import requests
 from requests.auth import HTTPDigestAuth
 import io
 from PIL import Image
+import datetime
 
 
 class Vapix(object):
@@ -14,111 +15,70 @@ class Vapix(object):
         self.debug_mode = debug
         self.headers = {'X-Requested-Auth': 'Digest'}
 
-    def user_or_password_error(self):
-        # FIXME raise an exception
-        print('[-] Username or password error')
-
-    def error_with_status_code(self, r):
-        # FIXME raise an exception
-        print('[-] Error: ' + str(r.status_code))
-
-    def get_VAPIX_version(self):
+    def get_vapix_version(self):
         """ displays the version of Axis VAPIX API supported by the camera """
-        try:
-            print('[*] Requesting VAPIX version...')
-            r = requests.get(self.base_url + 'param.cgi?action=list&group=Properties.API.HTTP.Version')
-            if r.status_code == 200:
-                r = str(r.content.decode('utf-8'))
-                vapix_version = r.split("=")[1]
-                print('[+] VAPIX version: ' + vapix_version)
-
-            elif r.status_code == 401:
-                self.user_or_password_error()
-
-            else:
-                self.error_with_status_code(r)
-
-        except:
-            print('[-] Error: getting VAPIX verision')
-            pass
+        print('[*] Requesting VAPIX version...')
+        response = self._handle_request('GET', 'param.cgi?action=list&group=Properties.API.HTTP.Version')
+        return response.content.strip()
 
     def restart(self):
         """ Restarts the Axis camera """
-        try:
-            r = requests.get(self.base_url + '/admin/restart.cgi')
-            print('[*] Restaring ' + self.ip)
-            if r.status_code == 200:
-                print('[+] Axis camera has been restarted successfully')
-            elif r.status_code == 401:
-                self.user_or_password_error()
-            else:
-                self.error_with_status_code(r)
-        except:
-            self.error_with_status_code(r)
-            pass
+        print('[*] Restarting Camera with ip: ' + self.ip)
+        self._handle_request('GET', '/admin/restart.cgi')
 
-    def display_live_image(self):
+    def get_live_image(self, resolution='1280x720'):
         """ Gets the latest image from the camera and displays it using PIL package """
-        r = requests.get(self.base_url + 'jpg/image.cgi')
-        if r.status_code == 200:
-            f = io.BytesIO(r.content)
-            img = Image.open(f)
-            img.show()
+        response = self._handle_request('GET', 'jpg/image.cgi?resolution={}'.format(resolution))
+        live_img = Image.open(io.BytesIO(response.content))
+        return live_img
 
     def set_overlay_text(self, text='test'):
-        requests.get(self.base_url + 'param.cgi?action=update%20&Image.I0.Text.TextEnabled=yes&Image.I0.Text.String=' + text)
+        """setting custom overlay text image on the camera image"""
+        print('[*] Setting text overlay...')
+        self._handle_request('GET', 'param.cgi?action=update%20&Image.I0.Text.TextEnabled=yes&Image.I0.Text.String=' + text)
 
-    def _handle_request(self, request_type, request_data):
-        """
-        will only handle GET, POST requests
-        :param request_type:
-        :param request_data:
-        :return:
-        """
-        if self.debug_mode:
-            print('[+] DEBUG MODE ENABLED: not sending requests')
-            return True
-
-        r = None
-
-        if request_type == 'POST':
-            try:
-                headers = {'X-Requested-Auth': 'Digest'}
-                r = requests.post(self.base_url + request_data, headers=headers, auth=HTTPDigestAuth(self.username, self.password), timeout=5)
-            except Exception as e:
-                #FIXME this should be a specific exception
-                print('[-] Error: ' + str(e))
-                return True
-
-        if request_type == 'GET':
-            try:
-                headers = {'X-Requested-Auth': 'Digest'}
-                r = requests.get(self.base_url + request_data, headers=headers, auth=HTTPDigestAuth(self.username, self.password), timeout=5)
-            except Exception as e:
-                #FIXME this should be a specific exception
-                print('[-] Error: ' + str(e))
-                return True
-
-        if r and self._handle_status(r):
-            print('[+] VAPIX HTTP request successful')
-            return True
-
-    def _handle_status(self, request):
-        if request.status_code == 200:
-            return True
-
-        if request.status_code == 204:
-            return True
-
-        elif request.status_code == 401:
-            self.user_or_password_error()
-            return False
-
+    def set_tallyled(self, led=True):
+        """Setting tally LED on the camera on/off"""
+        if led:
+            led_setting = 'on'
         else:
-            self.error_with_status_code(request)
-            return False
+            led_setting = 'off'
+        print('[*] Setting Tally LED...')
+        self._handle_request('GET', 'param.cgi?action=update%20&TallyLED.Usage={}'.format(led_setting))
 
+    def get_time(self):
+        print('[*] Getting the current time on the camera')
+        response = self._handle_request('GET', 'date.cgi?action=get')
+        return response.content
 
+    def set_time_source(self, tsource=None):
+        """
+        set the camera source for getting the time
+        PC
+        None
+        NTP
+        :param tsource: 
+        :return: 
+        """
+        print('[*] Setting the time source')
+        self._handle_request('GET', 'param.cgi?action=update&Time.SyncSource={}'.format(tsource))
+
+    def set_time(self):
+        """
+        sets the time on the camera to the current time (datetime.now)
+        :return: 
+        """
+        now = datetime.datetime.now()
+        yr = now.year
+        mth = now.month
+        dy = now.day
+        hr = now.hour
+        mn = now.minute
+        sc = now.second
+        self._handle_request('GET', 'date.cgi?action=set&' \
+                      'year={}&month={}&day={}&hour={}&minute={}&second={}'.format(yr, mth, dy, hr, mn, sc))
+
+    # PTZ API
     def continuouspantiltmove(self, pan_dir_speed, tilt_dir_speed):
         """
         Continuous pan/tilt motion. Positive values mean right (pan) and up (tilt), negative values mean left (pan) and
@@ -130,9 +90,6 @@ class Vapix(object):
         # FIXME figure out how to print out if movement request is left, right, up or down is happening from the number
         print('[*] moving camera: ' + pan_dir_speed, tilt_dir_speed)
         self._handle_request('GET', 'com/ptz.cgi?continuouspantiltmove={},{}'.format(pan_dir_speed, tilt_dir_speed))
-
-    def stop(self):
-        self._handle_request('GET', 'com/ptz.cgi?continuouspantiltmove={},{}'.format('0', '0'))
 
     def continuouszoommove(self, zoom_type_speed):
         """
@@ -163,3 +120,64 @@ class Vapix(object):
         """
         print('[*] moving camera: ' + move_cmd)
         self._handle_request('GET', 'com/ptz.cgi?move={}'.format(move_cmd))
+
+    # Sending and handling the requests
+    def _handle_request(self, request_type, request_data):
+        """
+        will only handle VAPIX compatible GET, POST requests to axis cameras
+        :param request_type:
+        :param request_data:
+        :return:
+        """
+        if self.debug_mode:
+            print('[+] DEBUG MODE ENABLED: not sending requests')
+            return True
+
+        r = None
+
+        if request_type == 'POST':
+            try:
+                headers = {'X-Requested-Auth': 'Digest'}
+                r = requests.post(self.base_url + request_data, headers=headers, auth=HTTPDigestAuth(self.username, self.password), timeout=10)
+            except Exception as e:
+                #FIXME this should be a specific exception
+                print('[-] Error: ' + str(e))
+                return False
+
+        if request_type == 'GET':
+            try:
+                headers = {'X-Requested-Auth': 'Digest'}
+                r = requests.get(self.base_url + request_data, headers=headers, auth=HTTPDigestAuth(self.username, self.password), timeout=10)
+            except Exception as e:
+                #FIXME this should be a specific exception
+                print('[-] Error: ' + str(e))
+                return False
+
+        if r and self._handle_status(r):
+            print('[+] VAPIX HTTP request successful')
+            return r
+
+    def _handle_status(self, request):
+        if request.status_code == 200:
+            return True
+
+        if request.status_code == 204:
+            return True
+
+        elif request.status_code == 401:
+            self.user_or_password_error()
+            return False
+
+        else:
+            self.error_with_status_code(request)
+            return False
+
+            # error notifications
+
+    def user_or_password_error(self):
+        # FIXME raise an exception
+        print('[-] Username or password error')
+
+    def error_with_status_code(self, r):
+        # FIXME raise an exception
+        print('[-] Error: ' + str(r.status_code))

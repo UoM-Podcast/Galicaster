@@ -83,19 +83,8 @@ def init():
     recorder = context.get_recorder()
 
     try:
-        global axis_http
         import galicaster.utils.pyvapix as camera
         import galicaster.utils.camctrl_http_interface as axis_web
-        # connect to the camera
-        ip = config.get(IPADDRESS)
-
-        # Initiate axis web UI
-        web_username = config.get('web_username')
-        web_password = config.get('web_password')
-        axis_http = axis_web.AxisWeb(ip, web_username, web_password)
-
-        # cam = camera.Vapix(ip, username, password)
-        # initiate the vapix user interface
         dispatcher.connect("init", init_vapix_ui)
     except Exception as e:
         logger.error(e)
@@ -341,7 +330,7 @@ class vapix_interface():
 
     def stop_move(self, button):
         logger.debug("I make a break")
-        vapix.Vapix(ip=self.camera_ip, username=self.camera_user, password=self.camera_pass).stop()
+        self.send_ptz('0', '0')
         self.send_ptzzoom('0')
 
 
@@ -387,7 +376,9 @@ class vapix_interface():
 
         preset = config.get(RECORD_PRESET_KEY, DEFAULT_RECORD_PRESET)
         mp = repo.get_next_mediapackage()
-        axis_http.tallyled(True)
+        # turn on the camera light while recording
+        for ip in self.camera_ips:
+            vapix.Vapix(ip=ip, username=self.camera_user, password=self.camera_pass).set_tallyled(True)
         if mp is not None:
                 try:
                     properties = mp.getOCCaptureAgentProperties()
@@ -405,7 +396,9 @@ class vapix_interface():
 
 
     def on_stop_recording(self, elem, elem2):
-        axis_http.tallyled(False)
+        # turn off the camera light while stopped
+        for ip in self.camera_ips:
+            vapix.Vapix(ip=ip, username=self.camera_user, password=self.camera_pass).set_tallyled(False)
         try:
             pass
             # presetlist.set_active_id(config.get(IDLE_PRESET_KEY, DEFAULT_IDLE_PRESET))
