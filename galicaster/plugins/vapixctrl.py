@@ -84,7 +84,6 @@ def init():
 
     try:
         import galicaster.utils.pyvapix as camera
-        import galicaster.utils.camctrl_http_interface as axis_web
         dispatcher.connect("init", init_vapix_ui)
     except Exception as e:
         logger.error(e)
