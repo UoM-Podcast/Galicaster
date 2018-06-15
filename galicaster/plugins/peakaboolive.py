@@ -454,42 +454,42 @@ class DDP(Thread):
 
             if me['ptzmove'] == ptz_prefix + 'left-up-button' + ptz_suffix:
                 print 'move left up!'
-                self.send_ptz(cam_ip, self.ptz_sp_minus, self.ptz_sp_plus)
+                self.send_ptz_setmove(cam_ip, 'upleft')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'up-button' + ptz_suffix:
                 print 'move up!'
-                self.send_ptz(cam_ip, '0', self.ptz_sp_plus)
+                self.send_ptz_setmove(cam_ip, 'up')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-up-button' + ptz_suffix:
                 print 'move right up!'
-                self.send_ptz(cam_ip, self.ptz_sp_plus, self.ptz_sp_plus)
+                self.send_ptz_setmove(cam_ip, 'upright')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'left-button' + ptz_suffix:
                 print 'move left!'
-                self.send_ptz(cam_ip, self.ptz_sp_minus, '0')
+                self.send_ptz_setmove(cam_ip, 'left')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-button' + ptz_suffix:
                 print 'move right!'
-                self.send_ptz(cam_ip, self.ptz_sp_plus, '0')
+                self.send_ptz_setmove(cam_ip, 'right')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'left-down-button' + ptz_suffix:
                 print 'move left down!'
-                self.send_ptz(cam_ip, self.ptz_sp_minus, self.ptz_sp_minus)
+                self.send_ptz_setmove(cam_ip, 'downleft')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'down-button' + ptz_suffix:
                 print 'move down!'
-                self.send_ptz(cam_ip, '0', self.ptz_sp_minus)
+                self.send_ptz_setmove(cam_ip, 'down')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-down-button' + ptz_suffix:
                 print 'move right down!'
-                self.send_ptz(cam_ip, self.ptz_sp_plus, self.ptz_sp_minus)
+                self.send_ptz_setmove(cam_ip, 'downright')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'zoom-in-button' + ptz_suffix:
@@ -502,15 +502,16 @@ class DDP(Thread):
                 self.send_ptzzoom(cam_ip, self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
-        if not self.ptzhome:
+        # if not self.ptzhome:
             if me['ptzmove'] == ptz_prefix + 'home-button' + ptz_suffix:
                 print 'move home position!'
-                self.send_ptzhome(cam_ip, 'home')
+                self.send_ptz_setmove(cam_ip, 'home')
+                self.ptzmovement = True
                 self.ptzhome = True
         if self.ptzmovement:
             if me['ptzmove'] == False:
                 print 'stop moving!'
-                self.send_ptz(cam_ip, '0', '0')
+                self.send_ptz_setmove(cam_ip, 'stop')
                 self.send_ptzzoom(cam_ip, '0')
                 self.ptzmovement = False
 
@@ -518,7 +519,7 @@ class DDP(Thread):
         # send ptz commands to the specified camera
         vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).continuouspantiltmove(cmd1,cmd2)
 
-    def send_ptzhome(self, ipaddress, cmd1):
+    def send_ptz_setmove(self, ipaddress, cmd1):
         # send absolute ptz commands to the specified camera
         vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).move(cmd1)
 

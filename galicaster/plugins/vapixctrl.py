@@ -85,6 +85,7 @@ def init():
     try:
         import galicaster.utils.pyvapix as camera
         dispatcher.connect("init", init_vapix_ui)
+
     except Exception as e:
         logger.error(e)
     logger.info("Camera connected.")
@@ -273,6 +274,13 @@ class vapix_interface():
         self.camera_ip = self.camera_ips[0]
         self.camera_user = self.camera_users[0]
         self.camera_pass = self.camera_passes[0]
+        # set some camera defaults at startup. tally LED off and time = now
+        for ip in self.camera_ips:
+            try:
+                vapix.Vapix(ip=ip, username=self.camera_user, password=self.camera_pass).set_tallyled(False)
+                vapix.Vapix(ip=ip, username=self.camera_user, password=self.camera_pass).set_time()
+            except Exception as e:
+                print e
 
     # movement functions
     def move_left(self, button):
