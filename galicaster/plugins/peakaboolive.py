@@ -511,7 +511,7 @@ class DDP(Thread):
         if self.ptzmovement:
             if me['ptzmove'] == False:
                 print 'stop moving!'
-                self.send_ptz_setmove(cam_ip, 'stop')
+                # self.send_ptz_setmove(cam_ip, 'stop')
                 self.send_ptzzoom(cam_ip, '0')
                 self.ptzmovement = False
 
