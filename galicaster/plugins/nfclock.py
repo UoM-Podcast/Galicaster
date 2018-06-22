@@ -153,7 +153,13 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
 
     # add ids to workflow acls
     current_wf_acl = ocservice.get_wfparams('aclRoles')
-    ocservice.change_wfparams('aclRoles', user_list_str + ',' + current_wf_acl)
+    #combine acl roles from config and scanned spotids and turn into a list
+    full_wf_acl = (user_list_str + ',' + current_wf_acl).split(',')
+    # remove duplicates
+    full_wf_acl = list(set(full_wf_acl))
+    # turn back into a sting
+    full_wf_acl = ','.join(map(str, full_wf_acl))
+    ocservice.change_wfparams('aclRoles', full_wf_acl)
     ocservice.change_wfparams('spotIDs', user_list_str)
     # re lock once stopped
     text = {"title": _("Locked")}
