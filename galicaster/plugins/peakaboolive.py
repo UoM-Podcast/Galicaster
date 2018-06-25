@@ -56,6 +56,25 @@ def init():
     ddp.start()
 
 
+class liveStatus():
+    def __init__(self):
+        self.do_stop = False
+        self.recorder = context.get_recorder()
+
+    def set_stop(self, rec_status):
+        # print 'setting the stop status'
+        self.do_stop = rec_status
+
+    def stop_recording(self):
+        if self.do_stop:
+            # print 'doing the actual stop'
+            try:
+                self.recorder.stop()
+            except Exception as e:
+                print e
+            self.set_stop(False)
+
+
 class DDP(Thread):
 
     def __init__(self):
@@ -108,15 +127,24 @@ class DDP(Thread):
         self.last_cam_ip = None
         self.ptz_sp_plus = '50'
         self.ptz_sp_minus = '-50'
+        self.recorder = context.get_recorder()
+        self.safe_status = liveStatus()
+        self.last_move_cmd = None
 
         dispatcher.connect('init', self.on_init)
         dispatcher.connect('recorder-vumeter', self.vumeter)
         dispatcher.connect('timer-long', self.update_vu)
         dispatcher.connect('timer-short', self.heartbeat)
+        dispatcher.connect('recorder-vumeter', self.make_stop)
         dispatcher.connect('recorder-ready', self.add_inputs)
         dispatcher.connect('recorder-started', self.on_start_recording)
         dispatcher.connect('recorder-stopped', self.on_stop_recording)
         dispatcher.connect('recorder-status', self.on_rec_status_update)
+
+    def make_stop(self, signal0, signal1, signal2, signal3):
+        # allows to change recorder safely without segfault
+        self.safe_status.stop_recording()
+
 
     def get_ip_address(self):
         return socket.gethostbyname(socket.gethostname())
@@ -194,6 +222,7 @@ class DDP(Thread):
             })
 
     def on_stop_recording(self, mpid, sender=None):
+        # FIXME need to check the recording state before doing anything
         self.recording = False
         self.currentMediaPackage = None
         self.currentProfile = None
@@ -305,26 +334,28 @@ class DDP(Thread):
                 self.last_vu = self.vu_data
 
     def on_rec_status_update(self, element, data):
-        if data == 'paused':
-            is_paused = True
-        else:
-            is_paused = False
-        if is_paused:
-            # self.update_images(.75)
-            pass
-        if self.paused == is_paused:
-            self.update(
-                'rooms', {
-                    '_id': self.id}, {
-                    '$set': {
-                        'paused': is_paused}})
-            self.paused = is_paused
+        pausable = self.recorder.is_pausable()
+        if pausable:
+            if data == 'paused':
+                is_paused = True
+            else:
+                is_paused = False
+            if is_paused:
+                # self.update_images(.75)
+                pass
+            if self.paused == is_paused:
+                self.update(
+                    'rooms', {
+                        '_id': self.id}, {
+                        '$set': {
+                            'paused': is_paused}})
+                self.paused = is_paused
         if data == 'recording':
             # self.update_images(.75)
             pass
 
     def media_package_metadata(self, id):
-        mp = context.get('recorder').current_mediapackage
+        mp = self.recorder.current_mediapackage
         line = mp.metadata_episode
         duration = mp.getDuration()
         line["duration"] = long(duration / 1000) if duration else None
@@ -403,7 +434,7 @@ class DDP(Thread):
                     'inputs': self.inputs()}})
 
     def inputs(self):
-        recorder = context.get_recorder()
+        recorder = self.recorder
         try:
             self.bins = recorder.recorder.bins
         except AttributeError as e:
@@ -432,8 +463,12 @@ class DDP(Thread):
         if self.paused != me['paused']:
             self.set_paused(me['paused'])
 
-        if context.get('recorder').is_recording() != me['recording']:
-            self.set_recording(me)
+        if self.recorder.is_recording() and self.recording:
+            if not me['recording']:
+                self.set_recording(False, me)
+        else:
+            if me['recording']:
+                self.set_recording(True, me)
         # ptz camera commands
         ptz_prefix = 'peakaboo-ptz-'
         ptz_suffix = '_Camera_1'
@@ -453,64 +488,64 @@ class DDP(Thread):
 
 
             if me['ptzmove'] == ptz_prefix + 'left-up-button' + ptz_suffix:
-                print 'move left up!'
+                # print 'move left up!'
                 self.send_ptz_setmove(cam_ip, 'upleft')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'up-button' + ptz_suffix:
-                print 'move up!'
+                # print 'move up!'
                 self.send_ptz_setmove(cam_ip, 'up')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-up-button' + ptz_suffix:
-                print 'move right up!'
+                # print 'move right up!'
                 self.send_ptz_setmove(cam_ip, 'upright')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'left-button' + ptz_suffix:
-                print 'move left!'
+                # print 'move left!'
                 self.send_ptz_setmove(cam_ip, 'left')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-button' + ptz_suffix:
-                print 'move right!'
+                # print 'move right!'
                 self.send_ptz_setmove(cam_ip, 'right')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'left-down-button' + ptz_suffix:
-                print 'move left down!'
+                # print 'move left down!'
                 self.send_ptz_setmove(cam_ip, 'downleft')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'down-button' + ptz_suffix:
-                print 'move down!'
+                # print 'move down!'
                 self.send_ptz_setmove(cam_ip, 'down')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'right-down-button' + ptz_suffix:
-                print 'move right down!'
+                # print 'move right down!'
                 self.send_ptz_setmove(cam_ip, 'downright')
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'zoom-in-button' + ptz_suffix:
-                print 'zoom in'
+                # print 'zoom in'
                 self.send_ptzzoom(cam_ip, self.ptz_sp_plus)
                 self.ptzmovement = True
                 self.ptzhome = False
             if me['ptzmove'] == ptz_prefix + 'zoom-out-button' + ptz_suffix:
-                print 'zoom out'
+                # print 'zoom out'
                 self.send_ptzzoom(cam_ip, self.ptz_sp_minus)
                 self.ptzmovement = True
                 self.ptzhome = False
-        # if not self.ptzhome:
+        if not self.ptzhome:
             if me['ptzmove'] == ptz_prefix + 'home-button' + ptz_suffix:
-                print 'move home position!'
+                # print 'move home position!'
                 self.send_ptz_setmove(cam_ip, 'home')
                 self.ptzmovement = True
                 self.ptzhome = True
         if self.ptzmovement:
             if me['ptzmove'] == False:
-                print 'stop moving!'
+                # print 'stop moving!'
                 # self.send_ptz_setmove(cam_ip, 'stop')
                 self.send_ptzzoom(cam_ip, '0')
                 self.ptzmovement = False
@@ -531,19 +566,19 @@ class DDP(Thread):
         self.on_subscribed(None)
 
     def set_paused(self, new_status):
-        if not self.paused:
-            self.paused = new_status
-            logger.debug('paused')
-            context.get('recorder').pause()
-        else:
-            self.paused = False
-            logger.debug('resumed')
-            context.get('recorder').resume()
+        pausable = self.recorder.is_pausable()
+        if pausable:
+            if not self.paused:
+                self.paused = new_status
+                logger.debug('paused')
+                self.recorder.pause()
+            else:
+                self.paused = False
+                logger.debug('resumed')
+                self.recorder.resume()
 
-
-    def set_recording(self, me):
-        self.recording = me['recording']
-        if self.recording:
+    def set_recording(self, set_rec, me):
+        if set_rec:
             # FIXME: Metadata isn't passed to recorder
             meta = me.get('currentMediaPackage', {}) or {}
             profile = me.get('currentProfile', 'nocam')
@@ -553,11 +588,13 @@ class DDP(Thread):
             title = meta.get('title', 'Unknown')
             self.recording = True
             # make recorder start
-            context.get('recorder').record()
+            self.recorder.record()
         else:
             self.recording = False
             # make recorder stop
-            context.get('recorder').stop()
+            # self.recorder.stop(force=True)
+            # trying to detach from the actual stopping as it crashes
+            self.safe_status.set_stop(True)
 
     def on_connected(self):
         logger.info('Connected to Meteor')
