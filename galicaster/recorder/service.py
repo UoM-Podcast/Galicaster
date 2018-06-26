@@ -384,7 +384,10 @@ class RecorderService(object):
 
     def __new_mediapackage(self):
         now = datetime.now().replace(microsecond=0)
+        title_prefix = self.conf.get('recorder', 'title')
         title = _("Recording started at {0}").format(now.isoformat())
+        if title_prefix:
+            title = _("{0} {1}").format(title_prefix, now.isoformat())
         mp = mediapackage.Mediapackage(title=title)
         return mp
 
