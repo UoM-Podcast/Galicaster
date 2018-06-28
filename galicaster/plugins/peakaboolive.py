@@ -32,6 +32,9 @@ import uuid
 import gi
 import subprocess
 import re
+import shlex
+from subprocess import Popen
+from multiprocessing.pool import ThreadPool
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GdkPixbuf
 from random import randint
@@ -266,8 +269,25 @@ class DDP(Thread):
                                  "-vsync cfr -x264-params 'nal-hrd=cbr' -b:v 1500k -minrate 1500k -maxrate 1500k -bufsize 3000k -g 60 -s " \
                                  "1280x720 -c:a aac -map 1:v:0 -map 1:a:0 -f " \
                                  "flv rtmp://{}/dash/{}".format(location, self.cam_rtmp_hostname, self.displayName + '_' + name)
-                    subprocess.Popen(stream_cmd, shell=True)
+                    # subprocess.Popen(stream_cmd, shell=True)
+                    self._output_1(stream_cmd)
                 self.stream = True
+
+    def _livestream_exec(self, full_cmd):
+        #subprocess.call(full_cmd, shell=True)
+        p = Popen(shlex.split(full_cmd))
+        return p
+
+    def _output_1(self, stream_cmd):
+        # thread = threading.Thread(target=livestream_exec)
+        # thread.daemon = True
+        # thread.start()
+        print 'go'
+
+        pool = ThreadPool(processes=1)
+
+        async_result = pool.apply_async(self._livestream_exec(stream_cmd))
+        return async_result
 
     def update_images(self, delay=0.0):
         worker = Thread(target=self._update_images, args=(delay,))
