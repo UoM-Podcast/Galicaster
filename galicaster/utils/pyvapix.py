@@ -101,6 +101,12 @@ class Vapix(object):
         print('[*] zooming camera: ' + zoom_type_speed)
         self._handle_request('GET', 'com/ptz.cgi?continuouszoommove={}'.format(zoom_type_speed))
 
+    def zoom(self, zoom_dist):
+        self._handle_request('GET', 'com/ptz.cgi?zoom={}'.format(zoom_dist))
+
+    def rzoom(self, zoom_dist):
+        self._handle_request('GET', 'com/ptz.cgi?rzoom={}'.format(zoom_dist))
+
     def move(self, move_cmd):
         """
         Absolute:Moves the image 25 % of the image field width in the specified direction. Relative: Moves the device
