@@ -14,6 +14,7 @@
 """
 """
 
+import os
 from galicaster.classui import message
 from galicaster.core import context
 
@@ -36,6 +37,7 @@ def init():
     ocservice = context.get_ocservice()
     dispatcher.connect('init', show_msg)
     dispatcher.connect('recorder-stopped', update_mediapackage_nfcuserlist)
+    dispatcher.connect('operation-started', addacl_on_ingest)
 
 def show_msg(element=None, signal=None):
     buttonDIS = show_buttons(PAGES['DIS'])
@@ -140,19 +142,11 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
     # add IDs to the org.opencast.properties file
     recorder = context.get_recorder()
     mp = recorder.current_mediapackage
-    occap = mp.getOCCaptureAgentProperties()
-    occap[WORKFLOW_CONFIG + '.spotIDs'] = user_list_str
-    occap_list = []
-    for prpt, value in occap.items():
-        occap_list.append(prpt + '=' + str(value))
 
-    prpts_str = '\n'.join(occap_list)
-
-    mp.addAttachmentAsString(prpts_str, 'org.opencastproject.capture.agent.properties',
-                             'org.opencastproject.capture.agent.properties')
 
     # add ids to workflow acls
-    current_wf_acl = ocservice.get_wfparams('aclRoles')
+    workflowparams = conf.get_dict('ingest', 'workflow-parameters')
+    current_wf_acl = workflowparams['aclRoles']
     #combine acl roles from config and scanned spotids and turn into a list
     if user_list_str == '':
         full_wf_acl = (current_wf_acl).split(',')
@@ -163,23 +157,58 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
     full_spotid = list(set(full_wf_acl))
     # turn back into a sting
     full_wf_acl = ','.join(map(str, full_wf_acl))
-    ocservice.change_wfparams('aclRoles', full_wf_acl)
+    # ocservice.change_wfparams('aclRoles', full_wf_acl)
     #remove the role_admin from the list so just to have the ids
     full_spotid.remove('ROLE_ADMIN')
     full_spotid = ','.join(map(str, full_spotid))
-    ocservice.change_wfparams('spotIDs', full_spotid)
+    # ocservice.change_wfparams('spotIDs', full_spotid)
+
+    # Write out spotids to file
+    # occap = {}
+    # occap[WORKFLOW_CONFIG + '.spotIDs'] = full_spotid
+    # occap_list = []
+    # for prpt, value in occap.items():
+    #     occap_list.append(prpt + '=' + str(value))
+    #
+    # prpts_str = '\n'.join(occap_list)
+    spotid_attachment = 'spotid.attach'
+    mpUri = mp.getURI()
+    dest = os.path.join(mpUri, spotid_attachment)
+    if not os.path.isfile(dest):
+        spotidfile = open(dest, "w")
+        spotidfile.write(full_spotid)
+        spotidfile.close()
+
     # re lock once stopped
     text = {"title": _("Locked")}
-
     show = []
     last_user_list = []
     for i in message.user_list:
         last_user_list.append(i)
     lock(None, text, show, last_user_list)
 
-    # print user_list
     # important list is deleted
     del message.user_list[:]
     del user_list[:]
-    # print user_list
+
+
+def addacl_on_ingest(signal, action, mp):
+    ocservice = context.get_ocservice()
+    current_wf_acl = ocservice.get_wfparams('aclRoles')
+    # read spotids from file
+    spotid_attachment = 'spotid.attach'
+    mpUri = mp.getURI()
+    dest = os.path.join(mpUri, spotid_attachment)
+    spotidfile = open(dest, "r")
+    try:
+        get_spotids = spotidfile.readline()
+    except Exception as e:
+        print e
+        return
+    spotidfile.close()
+    new_wf_acl = 'ROLE_ADMIN' + ',' + get_spotids
+    ocservice.change_wfparams('spotIDs', get_spotids)
+    ocservice.change_wfparams('aclRoles', new_wf_acl)
+    repo = context.get_repository()
+    repo.update(mp)
 
