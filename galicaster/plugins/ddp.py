@@ -292,7 +292,7 @@ class DDP(Thread):
 
     def media_package_metadata(self, id):
         mp = context.get('recorder').current_mediapackage
-        line = mp.metadata_episode
+        line = dict(mp.metadata_episode)
         duration = mp.getDuration()
         line["duration"] = long(duration / 1000) if duration else None
         # FIXME Does series_title need sanitising as well as duration?
