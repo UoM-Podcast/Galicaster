@@ -182,7 +182,7 @@
           <object class="GtkLabel" id="main">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Please Tap Card</property>
+            <property name="label" translatable="yes">To begin: Tap ID card on the card reader</property>
             <style>
               <class name="dialog_title"/>
             </style>
@@ -243,12 +243,24 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="margin_bottom">37</property>
+                    <property name="pixbuf">../images/nfc-card-reader-300x192.png</property>
                     <property name="pixel_size">104</property>
-                    <property name="icon_name">gnome-netstatus-75-100</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="notif">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">How To: man.ac.uk/3Z0MNl
+Privacy Statement: man.ac.uk/CC1m2w</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">3</property>
                   </packing>
                 </child>
                 <style>
