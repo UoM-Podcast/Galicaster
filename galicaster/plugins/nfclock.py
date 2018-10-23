@@ -125,7 +125,7 @@ def on_unlock(*args, **kwargs):
             lmessage.show()
     elif len(message.user_list) < 1:
         lmessage = builder.get_object("lockmessage")
-        lmessage.set_text("Error: User ID not recognised. Please try again")
+        lmessage.set_text("No ID Found: Press the above box and try again")
         lmessage.show()
     else:
         lmessage = builder.get_object("lockmessage")
