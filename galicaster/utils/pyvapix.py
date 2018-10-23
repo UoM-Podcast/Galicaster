@@ -79,6 +79,24 @@ class Vapix(object):
                       'year={}&month={}&day={}&hour={}&minute={}&second={}'.format(yr, mth, dy, hr, mn, sc))
 
     # PTZ API
+    def get_ptz_presets(self):
+        print('[*] Getting the current PTZ presets from the camera')
+        response = self._handle_request('GET', 'param.cgi?action=list&group=PTZ.Preset.P0.Position')
+        return response.content.strip()
+
+    def get_ptz_status(self, query):
+        """
+        Returns the current status. limits = PTZ limits for the Axis product. mode = Products with Panopsis technology: 
+        The current mode (overview or normal). position = Values for current position. presetposall = Current preset
+        positions for all video channels. presetposcam = Current preset positions for a video channel. speed = Values 
+        for pan/tilt speed.
+        :param query: <string>
+        :return: 
+        """
+        print('[*] getting ptz status for: ' + query)
+        response = self._handle_request('GET', 'com/ptz.cgi?query={}'.format(query))
+        return response.content
+
     def continuouspantiltmove(self, pan_dir_speed, tilt_dir_speed):
         """
         Continuous pan/tilt motion. Positive values mean right (pan) and up (tilt), negative values mean left (pan) and
@@ -126,6 +144,15 @@ class Vapix(object):
         """
         print('[*] moving camera: ' + move_cmd)
         self._handle_request('GET', 'com/ptz.cgi?move={}'.format(move_cmd))
+
+    def gotoserverpresetname(self, preset_name):
+        """
+        Move to the position associated with the <preset name>
+        :param preset_name: <string>
+        :return: 
+        """
+        print('[*] moving camera to the preset: ' + preset_name)
+        self._handle_request('GET', 'com/ptz.cgi?gotoserverpresetname={}'.format(preset_name))
 
     # Sending and handling the requests
     def _handle_request(self, request_type, request_data):
