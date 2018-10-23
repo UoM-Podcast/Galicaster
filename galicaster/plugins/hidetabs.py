@@ -34,7 +34,7 @@ def post_init(source=None):
 
     # Customize tabs in the recorder UI
     try: 
-        tabs_to_hide = set( x for x in set(conf.get('hidetabs', 'hide').split()) if x in ALL_TABS )
+        tabs_to_hide = set( x for x in set(conf.get('hidetabs', 'hide').split(';')) if x in ALL_TABS )
         if tabs_to_hide:
             for tab, obj_name in ALL_TABS.iteritems():
                 page = recorder_ui.get_object(obj_name)
