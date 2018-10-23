@@ -372,7 +372,7 @@ class DDP(Thread):
 
     def media_package_metadata(self, id):
         mp = self.recorder.current_mediapackage
-        line = mp.metadata_episode
+        line = dict(mp.metadata_episode)
         duration = mp.getDuration()
         line["duration"] = long(duration / 1000) if duration else None
         # FIXME Does series_title need sanitising as well as duration?
@@ -486,8 +486,12 @@ class DDP(Thread):
         else:
             if me['recording']:
                 self.set_recording(True, me)
+                return
         # ptz camera commands
-        if self.last_move_cmd == me['ptzmove']:
+        try:
+            if self.last_move_cmd == me['ptzmove']:
+                return
+        except KeyError as ptzerror:
             return
         else:
             ptz_prefix = 'peakaboo-ptz-'
@@ -557,6 +561,11 @@ class DDP(Thread):
                     # self.ptzmovement = True
                     # self.ptzhome = False
             # if not self.ptzhome:
+                if me['ptzmove'].split('_')[0] == ptz_prefix + 'privacy-button':
+                    # print 'move left up!'
+                    self.send_ptz_setpreset(cam_ip, 'privacy')
+                    # self.ptzmovement = True
+                    # self.ptzhome = False
                 if me['ptzmove'].split('_')[0] == ptz_prefix + 'home-button':
                     # print 'move home position!'
                     self.send_ptz_setmove(cam_ip, 'home')
@@ -577,6 +586,10 @@ class DDP(Thread):
     def send_ptz_setmove(self, ipaddress, cmd1):
         # send absolute ptz commands to the specified camera
         vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).move(cmd1)
+
+    def send_ptz_setpreset(self, ipaddress, cmd1):
+        # send ptz preset commands to the specified camera
+        vapix.Vapix(ip=ipaddress, username=self.cam_auth_user, password=self.cam_auth_pass).gotoserverpresetname(cmd1)
 
     def send_ptzzoom(self, ipaddress, cmd1):
         # send ptz zoom commands to the specified camera
