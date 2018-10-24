@@ -86,12 +86,12 @@ class Vapix(object):
 
     def get_ptz_status(self, query):
         """
-        Returns the current status. limits = PTZ limits for the Axis product. mode = Products with Panopsis technology: 
+        Returns the current status. limits = PTZ limits for the Axis product. mode = Products with Panopsis technology:
         The current mode (overview or normal). position = Values for current position. presetposall = Current preset
-        positions for all video channels. presetposcam = Current preset positions for a video channel. speed = Values 
+        positions for all video channels. presetposcam = Current preset positions for a video channel. speed = Values
         for pan/tilt speed.
         :param query: <string>
-        :return: 
+        :return:
         """
         print('[*] getting ptz status for: ' + query)
         response = self._handle_request('GET', 'com/ptz.cgi?query={}'.format(query))
@@ -149,7 +149,7 @@ class Vapix(object):
         """
         Move to the position associated with the <preset name>
         :param preset_name: <string>
-        :return: 
+        :return:
         """
         print('[*] moving camera to the preset: ' + preset_name)
         self._handle_request('GET', 'com/ptz.cgi?gotoserverpresetname={}'.format(preset_name))
