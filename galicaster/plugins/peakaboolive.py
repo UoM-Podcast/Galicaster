@@ -479,10 +479,12 @@ class DDP(Thread):
         me = self.client.find_one('rooms')
         if self.paused != me['paused']:
             self.set_paused(me['paused'])
+            return
 
         if self.recorder.is_recording() and self.recording:
             if not me['recording']:
                 self.set_recording(False, me)
+                return
         else:
             if me['recording']:
                 self.set_recording(True, me)
@@ -492,14 +494,13 @@ class DDP(Thread):
             if self.last_move_cmd == me['ptzmove']:
                 return
         except KeyError as ptzerror:
+            logger.debug("peakaboo ptz control error: " + ptzerror)
             return
         else:
             ptz_prefix = 'peakaboo-ptz-'
             ptz_suffix = '_Camera_1'
             cam_ip = self.last_cam_ip
-            # if not self.ptzmovement:
-                # determine which camera the command is for
-            # FIXME sends 'False when not moving so stop is unknown right now
+            # determine which camera the command is for
             if me['ptzmove'].split('_')[0] != 'false':
                 for name, bin in self.bins.iteritems():
                     if bin.options['type'] == 'video/camera':
@@ -513,70 +514,57 @@ class DDP(Thread):
                 if me['ptzmove'].split('_')[0] == ptz_prefix + 'left-up-button':
                     # print 'move left up!'
                     self.send_ptz_setmove(cam_ip, 'upleft')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'up-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'up-button':
                     # print 'move up!'
                     self.send_ptz_setmove(cam_ip, 'up')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'right-up-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'right-up-button':
                     # print 'move right up!'
                     self.send_ptz_setmove(cam_ip, 'upright')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'left-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'left-button':
                     # print 'move left!'
                     self.send_ptz_setmove(cam_ip, 'left')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'right-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'right-button':
                     # print 'move right!'
                     self.send_ptz_setmove(cam_ip, 'right')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'left-down-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'left-down-button':
                     # print 'move left down!'
                     self.send_ptz_setmove(cam_ip, 'downleft')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'down-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'down-button':
                     # print 'move down!'
                     self.send_ptz_setmove(cam_ip, 'down')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'right-down-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'right-down-button':
                     # print 'move right down!'
                     self.send_ptz_setmove(cam_ip, 'downright')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'zoom-in-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'zoom-in-button':
                     # print 'zoom in'
                     self.send_ptzzoom(cam_ip, self.ptz_relmove)
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'zoom-out-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'zoom-out-button':
                     # print 'zoom out'
                     self.send_ptzzoom(cam_ip, '-' + self.ptz_relmove)
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-            # if not self.ptzhome:
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'privacy-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'privacy-button':
                     # print 'move left up!'
                     self.send_ptz_setpreset(cam_ip, 'privacy')
-                    # self.ptzmovement = True
-                    # self.ptzhome = False
-                if me['ptzmove'].split('_')[0] == ptz_prefix + 'home-button':
+
+                elif me['ptzmove'].split('_')[0] == ptz_prefix + 'home-button':
                     # print 'move home position!'
                     self.send_ptz_setmove(cam_ip, 'home')
-                    # self.ptzmovement = True
-                    # self.ptzhome = True
-            # if self.ptzmovement:
-                if me['ptzmove'].split('_')[0] == 'false':
+
+                elif me['ptzmove'].split('_')[0] == 'false':
                     print 'stop moving!'
                     # self.send_ptz_setmove(cam_ip, 'stop')
                     self.send_ptzzoom(cam_ip, '0')
-                    # self.ptzmovement = False
+                else:
+                    return
             self.last_move_cmd = me['ptzmove']
 
     def send_ptz(self, ipaddress, cmd1, cmd2):
