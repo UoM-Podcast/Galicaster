@@ -410,7 +410,8 @@ class DDP(Thread):
                 'heartbeat': int(time.time()),
                 'camAvailable': self.cam_available,
                 'supportGroup': self.support_group,
-                'ptzPort': self.ptz_port
+                'ptzPort': self.ptz_port,
+                'ptzmove': self.ptzmovement
             }
             # Parse extra Meteor Mongodb collection elements and append
             if self.extra_params_list:
