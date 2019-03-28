@@ -85,7 +85,7 @@ def init():
     try:
         import galicaster.utils.pyvapix as camera
         dispatcher.connect("init", init_vapix_ui)
-
+        dispatcher.connect("recorder-ready", set_default_tab)
     except Exception as e:
         logger.error(e)
     logger.info("Camera connected.")
@@ -129,7 +129,7 @@ def init_vapix_ui(element):
 
     notebook.append_page(mainbox, get_label("notebook"))
 
-    notebook.show_all()
+    # notebook.show_all()
 
     # buttons
     # movement
@@ -428,6 +428,7 @@ def get_icon(imgname):
     img.show()
     return img
 
+
 def get_stock_icon(imgname):
     size = res * 28
     if imgname == "stop":
@@ -438,6 +439,7 @@ def get_stock_icon(imgname):
     img.set_pixel_size(size)
     img.show()
     return img
+
 
 def get_label(labelname):
     label = builder.get_object(labelname+"_label")
@@ -458,3 +460,13 @@ def get_label(labelname):
     label.set_use_markup(True)
     label.modify_font(Pango.FontDescription(str(size)))
     return label
+
+
+def set_default_tab(signal=None):
+    custom_default_tab = config.get('make_default_tab', False)
+    if custom_default_tab:
+        recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
+        notebook = recorder_ui.get_object("data_panel")
+        for i in notebook:
+            if i.get_name() == 'mainbox':
+                notebook.set_current_page(notebook.page_num(i))
