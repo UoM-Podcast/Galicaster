@@ -194,7 +194,6 @@ class GCvideotest(Gst.Bin, base.Base):
 
     def disable_preview(self):
         src1 = self.get_by_name('sink-'+self.options['name'])
-        print src1
         src1.set_property('saturation', -1000)
         src1.set_property('contrast', -1000)
 

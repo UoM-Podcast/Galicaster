@@ -136,7 +136,6 @@ class DoingThings():
         # thread = threading.Thread(target=livestream_exec)
         # thread.daemon = True
         # thread.start()
-        print 'go'
 
         pool = ThreadPool(processes=1)
 

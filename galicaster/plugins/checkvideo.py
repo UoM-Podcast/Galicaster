@@ -49,8 +49,8 @@ def check_video(self, mpid):
                     if mimetype not in minvideosize:
                         mimetype = 'default'
                     finfo = os.stat(t.getURI())
-                    print finfo.st_size
-                    print minvideosize[mimetype]
+                    # print finfo.st_size
+                    # print minvideosize[mimetype]
                     if (finfo.st_size <= minvideosize[mimetype]) :
                         logger.info("Filesize invalid, %dbytes", finfo.st_size)
                         mp.remove(t)
