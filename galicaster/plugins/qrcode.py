@@ -198,7 +198,7 @@ class QRCodeScanner():
                 self.edit_mode = 'opencast'
 
         # checking if blacklisted user
-        if current_mp:
+        if not current_mp.manual:
             email_list = self.get_emails(current_mp)
             if [eb for eb in email_list if eb in self.blacklist_list]:
                 self.blacklisting_on = True
