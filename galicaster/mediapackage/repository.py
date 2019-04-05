@@ -566,7 +566,12 @@ class Repository(object):
         for bin in bins:
             # TODO rec all and ingest
             capture_dev_names = mp.getOCCaptureAgentProperty('capture.device.names')
-            if mp.manual or not capture_dev_names or len(capture_dev_names) == 0 or capture_dev_names == 'defaults' or bin['name'].lower() in capture_dev_names or ignore_capture_devices:
+            if mp.manual or not capture_dev_names \
+                    or len(capture_dev_names) == 0 \
+                    or capture_dev_names == 'defaults' \
+                    or bin['name'].lower() in capture_dev_names \
+                    or bin['name'].lower().startswith('failover') \
+                    or ignore_capture_devices:
                 filename = os.path.join(bin['path'], bin['file'])
                 dest = os.path.join(mp.getURI(), os.path.basename(filename))
                 os.rename(filename, dest)
