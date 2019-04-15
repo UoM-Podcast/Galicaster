@@ -21,6 +21,7 @@ from galicaster.core import context
 from galicaster.classui import get_ui_path
 from galicaster.classui import get_image_path
 import socket
+import subprocess
 
 
 
@@ -61,33 +62,35 @@ def init_ls_ui(element):
 
     # buttons for mix options
     sbsbtn = builder.get_object("sbs")
-    sbsbtn.connect("clicked", SendMix().on_button_toggled, "set_composite_mode side_by_side_equal")
+    sbsbtn.connect("clicked", SendMix().on_button_clicked, "set_composite_mode side_by_side_equal")
 
     fullscreenbtn = builder.get_object("full")
-    fullscreenbtn.connect("clicked", SendMix().on_button_toggled, "set_composite_mode fullscreen")
+    fullscreenbtn.connect("clicked", SendMix().on_button_clicked, "set_composite_mode fullscreen")
 
     pipbtn = builder.get_object("pip")
-    pipbtn.connect("clicked", SendMix().on_button_toggled, "set_composite_mode picture_in_picture")
+    pipbtn.connect("clicked", SendMix().on_button_clicked, "set_composite_mode picture_in_picture")
 
 
     camonebtn = builder.get_object("cam1")
-    camonebtn.connect("clicked", SendMix().on_button_toggled, "set_video_a cam1")
+    camonebtn.connect("clicked", SendMix().on_button_clicked, "set_video_a cam1")
 
     camtwobtn = builder.get_object("cam2")
-    camtwobtn.connect("clicked", SendMix().on_button_toggled, "set_video_a cam2")
+    camtwobtn.connect("clicked", SendMix().on_button_clicked, "set_video_a cam2")
 
     screenbtn = builder.get_object("grabber")
-    screenbtn.connect("clicked", SendMix().on_button_toggled, "set_video_a grabber")
+    screenbtn.connect("clicked", SendMix().on_button_clicked, "set_video_a grabber")
 
     pausebtn = builder.get_object("pause")
-    pausebtn.connect("clicked", SendMix().on_button_toggled, "set_stream_blank pause")
+    pausebtn.connect("clicked", SendMix().on_button_clicked, "set_stream_blank pause")
 
     noavbtn = builder.get_object("noav")
-    noavbtn.connect("clicked", SendMix().on_button_toggled, "set_stream_blank nostream")
+    noavbtn.connect("clicked", SendMix().on_button_clicked, "set_stream_blank nostream")
 
     livebtn = builder.get_object("livestreamm")
-    livebtn.connect("clicked", SendMix().on_button_toggled, "set_stream_live")
+    livebtn.connect("clicked", SendMix().on_button_clicked, "set_stream_live")
 
+    sourcebutton = builder.get_object("togglebutton1")
+    sourcebutton.connect("toggled", SendMix().on_button_toggled)
 
 
 class Netcat:
@@ -125,9 +128,15 @@ class SendMix():
     def __init__(self):
         pass
 
-    def on_button_toggled(self, button, mixcmd):
+    def on_button_clicked(self, button, mixcmd):
         nc = Netcat('127.0.0.1', 9999)
         nc.write(mixcmd + '\n')
+
+    def on_button_toggled(self, button):
+        if button.get_active():
+            process = subprocess.Popen('/opt/voctomix/uom-scripts/ffmpeg/start_uom_voctomix.sh')
+        else:
+            process = subprocess.Popen('pkill ffmpeg', shell=True)
 
 
 def get_icon(imgname):
