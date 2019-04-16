@@ -126,16 +126,20 @@ class Netcat:
 
 class SendMix():
     def __init__(self):
-        pass
+        self.voc_host = conf.get('voctomix', 'voc_host', '127.0.0.1')
+        self.voc_port = conf.get_int('voctomix', 'voc_port', 9999)
+        self.voc_sources = conf.get('voctomix', 'voc_sources', '/opt/voctomix/example-scripts/ffmpeg/source-avsync-test-clip-looped-as-cam1.sh')
 
     def on_button_clicked(self, button, mixcmd):
-        nc = Netcat('127.0.0.1', 9999)
+        nc = Netcat(self.voc_host, self.voc_port)
         nc.write(mixcmd + '\n')
 
     def on_button_toggled(self, button):
         if button.get_active():
-            process = subprocess.Popen('/opt/voctomix/uom-scripts/ffmpeg/start_uom_voctomix.sh')
+            print self.voc_sources
+            process = subprocess.Popen(self.voc_sources)
         else:
+            #FIXME only stops ffmpeg source scripts right now
             process = subprocess.Popen('pkill ffmpeg', shell=True)
 
 
