@@ -31,7 +31,6 @@
                 <property name="can_focus">False</property>
                 <property name="halign">center</property>
                 <property name="valign">center</property>
-                <property name="margin_left">15</property>
                 <property name="hexpand">True</property>
                 <property name="vexpand">True</property>
                 <property name="resize_mode">immediate</property>
