@@ -92,6 +92,10 @@ def init_ls_ui(element):
     sourcebutton = builder.get_object("togglebutton1")
     sourcebutton.connect("toggled", SendMix().on_button_toggled)
 
+    voc_buttons = [sbsbtn, fullscreenbtn, pipbtn, camonebtn, camtwobtn, screenbtn, pausebtn, noavbtn, livebtn, sourcebutton]
+    for vocs in voc_buttons:
+        vocs.modify_font(Pango.FontDescription(str(res * 20)))
+
 
 class Netcat:
     """ Python 'netcat like' module """
