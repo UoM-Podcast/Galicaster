@@ -48,14 +48,7 @@ def show_msg(element=None, signal=None):
 
     show = []
     auth_method = conf.get_choice('lockscreen', 'authentication', ['basic', 'ldap'], 'basic')
-    # quit_button = conf.get_boolean('lockscreen','enable_quit_button')
 
-    # if auth_method == "ldap":
-    # show = ["username_label","username_entry"]
-    #     text = {"title" : _("Lock screen"),
-    #         "main" : _("LDAP authentication")}
-    # if quit_button:
-    # show.append("quitbutton")
 
     if buttonDIS is not None:
         buttonDIS.connect("clicked",lock,text,show,None)
@@ -93,6 +86,13 @@ def show_buttons(ui):
     box.reorder_child(button,0)
     box.set_spacing(5)
     box.show_all()
+    # Remove buttons not needed for user interactions
+    recorder_ui = context.get_mainwindow().nbox.get_nth_page(0).gui
+    recorder_ui.get_object("previousbutton").hide()
+    recorder_ui.get_object("editbutton").hide()
+    recorder_ui.get_object("swapbutton").hide()
+    recorder_ui.get_object("label_channels").hide()
+
     return button
 
 
@@ -104,7 +104,6 @@ def on_unlock(*args, **kwargs):
     popup = kwargs.get('popup', None)
 
     lentry = builder.get_object("unlockpass")
-    # userentry = builder.get_object("username_entry")
 
     auth_method = conf.get_choice('lockscreen', 'authentication', ['basic', 'ldap'], 'basic')
 
@@ -112,25 +111,23 @@ def on_unlock(*args, **kwargs):
         # make sure empty strings arent valid
         if message.user_list[-1] is not '':
             logger.info("Galicaster unlocked")
-            # id_concat = str(lentry.get_text())
-            # ids_size = 12
-            # spot_ids = [id_concat[i:i+ids_size] for i in range(0, len(id_concat), ids_size)]
-            # for i in spot_ids:
-            #     user_list.append(i)
-            # print user_list
+
             popup.dialog_destroy()
         else:
             lmessage = builder.get_object("lockmessage")
             lmessage.set_text("Error: User ID not recognised. Please try again")
             lmessage.show()
+            lentry.grab_focus()
     elif len(message.user_list) < 1:
         lmessage = builder.get_object("lockmessage")
-        lmessage.set_text("No ID Found: Press the above box and try again")
+        lmessage.set_text("No ID Found: Tap card to the reader")
         lmessage.show()
+        lentry.grab_focus()
     else:
         lmessage = builder.get_object("lockmessage")
         lmessage.set_text("Wrong username/password")
         lmessage.show()
+        lentry.grab_focus()
 
 def update_mediapackage_nfcuserlist(sender, mpURI):
     # post-process the ID
@@ -161,16 +158,7 @@ def update_mediapackage_nfcuserlist(sender, mpURI):
     #remove the role_admin from the list so just to have the ids
     full_spotid.remove('ROLE_ADMIN')
     full_spotid = ','.join(map(str, full_spotid))
-    # ocservice.change_wfparams('spotIDs', full_spotid)
 
-    # Write out spotids to file
-    # occap = {}
-    # occap[WORKFLOW_CONFIG + '.spotIDs'] = full_spotid
-    # occap_list = []
-    # for prpt, value in occap.items():
-    #     occap_list.append(prpt + '=' + str(value))
-    #
-    # prpts_str = '\n'.join(occap_list)
     spotid_attachment = 'spotid.attach'
     mpUri = mp.getURI()
     dest = os.path.join(mpUri, spotid_attachment)
