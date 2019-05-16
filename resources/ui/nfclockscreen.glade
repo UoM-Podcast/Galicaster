@@ -182,7 +182,8 @@
           <object class="GtkLabel" id="main">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">To begin: Tap ID card on the card reader</property>
+            <property name="label" translatable="yes">Tap ID card on the card reader</property>
+            <property name="justify">center</property>
             <style>
               <class name="dialog_title"/>
             </style>
@@ -197,7 +198,6 @@
           <object class="GtkAlignment" id="table_align">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="margin_right">21</property>
             <property name="margin_top">10</property>
             <property name="margin_bottom">10</property>
             <property name="vexpand">True</property>
@@ -229,8 +229,8 @@
                   <object class="GtkEntry" id="unlockpass">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="margin_left">10</property>
-                    <property name="invisible_char">n</property>
+                    <property name="halign">center</property>
+                    <property name="valign">center</property>
                     <property name="input_purpose">digits</property>
                   </object>
                   <packing>
@@ -242,7 +242,7 @@
                   <object class="GtkImage" id="image3">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="margin_bottom">37</property>
+                    <property name="margin_bottom">30</property>
                     <property name="pixbuf">../images/nfc-card-reader-300x192.png</property>
                     <property name="pixel_size">104</property>
                   </object>
