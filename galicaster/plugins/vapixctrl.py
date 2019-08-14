@@ -284,10 +284,6 @@ class vapix_interface():
 
     # movement functions
     def move_left(self, button):
-        #print self.camera_name
-        #print self.camera_ip
-        #print self.camera_user
-        #print self.camera_pass
         logger.debug("I move left")
         self.send_ptz('-' + str(movescale.get_value() * 100), '0')
         # presetlist.set_active(-1)

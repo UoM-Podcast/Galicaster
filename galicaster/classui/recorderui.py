@@ -223,11 +223,13 @@ class RecorderClassUI(Gtk.Box):
         """GUI callback for pause/resume the recording"""
         if self.recorder.status == PAUSED_STATUS:
             self.dispatcher.emit("action-audio-enable-msg")
+            self.dispatcher.emit("recorder-paused", False)
             logger.debug("Resuming Recording")
             self.recorder.resume()
 
         elif self.recorder.status == RECORDING_STATUS:
             self.dispatcher.emit("action-audio-disable-msg")
+            self.dispatcher.emit("recorder-paused", True)
             logger.debug("Pausing Recording")
             self.recorder.pause()
 
