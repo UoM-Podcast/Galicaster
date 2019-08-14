@@ -53,4 +53,4 @@ def post_init(source=None):
     except KeyError:
         # The conf parameter isn't defined. Ignore
         pass
-    
+
