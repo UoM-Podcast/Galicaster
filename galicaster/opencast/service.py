@@ -281,3 +281,12 @@ class OCService(object):
         version = response["rest"][0]["version"]
         if LooseVersion("2.3.0") <= LooseVersion(version):
             self.client.setstate('offline')
+
+    def get_wfparams(self, param_key):
+        return self.client.workflow_parameters[param_key]
+
+
+    def change_wfparams(self, param_key, param_value):
+        # will add or append a new workflow parameter to the list the opencast client has from configuration
+        # new key, value pairs will be added existing keys, values will be overwitten (python dict behavior)
+        self.client.workflow_parameters[param_key] = param_value
