@@ -22,6 +22,7 @@ This module contains:
 import uuid
 import time
 import os
+import re
 from os import path
 from datetime import datetime
 from xml.dom import minidom
