@@ -50,7 +50,7 @@ PORT_KEY = "serial-port"
 BACKEND = 'backend'
 
 # This is the name of this plugin's section in the configuration file
-CONFIG_SECTION = "camctrl"
+CONFIG_SECTION = "vapixctrl"
 
 # This are the credentials, which have to be set in the configuration file
 IPADDRESS = "ip"

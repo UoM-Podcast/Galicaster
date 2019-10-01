@@ -24,6 +24,9 @@ from galicaster.mediapackage import mediapackage
 from galicaster.mediapackage import serializer
 from galicaster.mediapackage import deserializer
 
+from galicaster.opencast import series
+from galicaster.core import context
+
 """
 This class manages (add, list, remove...) all the mediapackages in the repository.
 """
@@ -566,7 +569,12 @@ class Repository(object):
         for bin in bins:
             # TODO rec all and ingest
             capture_dev_names = mp.getOCCaptureAgentProperty('capture.device.names')
-            if mp.manual or not capture_dev_names or len(capture_dev_names) == 0 or capture_dev_names == 'defaults' or bin['name'].lower() in capture_dev_names or ignore_capture_devices:
+            if mp.manual or not capture_dev_names \
+                    or len(capture_dev_names) == 0 \
+                    or capture_dev_names == 'defaults' \
+                    or bin['name'].lower() in capture_dev_names \
+                    or bin['name'].lower().startswith('failover') \
+                    or ignore_capture_devices:
                 filename = os.path.join(bin['path'], bin['file'])
                 dest = os.path.join(mp.getURI(), os.path.basename(filename))
                 os.rename(filename, dest)
@@ -576,10 +584,19 @@ class Repository(object):
                     flavour = bin['flavor'] + '/source'
                 else:
                     flavour = bin['flavor']
-                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration) # FIXME MIMETYPE
+
+                tags = []
+                if 'tags' in bin:
+                    tags = bin['tags']
+
+                mp.add(dest, mediapackage.TYPE_TRACK, flavour, etype, duration, tags=tags) # FIXME MIMETYPE
             else:
                 self.logger and self.logger.info("Not adding {} to MP {}".format(bin['file'],mp.getIdentifier()))
 
+        if mp.manual and not mp.getSeriesIdentifier():
+            conf = context.get_conf()
+            if conf.get('series','default'):
+                series.setSeriebyId(mp, conf.get('series','default'))
 
         mp.forceDuration(duration)
 

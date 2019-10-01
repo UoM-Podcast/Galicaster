@@ -33,6 +33,7 @@ ABOUT = 'about.glade'
 LOCKSCREEN = 'lockscreen.glade'
 MP_INFO = 'info.glade'
 NEXT_REC = 'next.glade'
+NFC_LOCKSCREEN = 'nfclockscreen.glade'
 
 # FIXME
 QUESTION = Gtk.STOCK_DIALOG_QUESTION
@@ -66,14 +67,14 @@ OPERATION_NAMES = {
 }
 
 instance = None
-
+user_list = []
 class PopUp(Gtk.Widget):
     """Handle a pop up for warnings and questions"""
     __gtype_name__ = 'PopUp'
 
     def __init__(self, message=None, text=TEXT, parent=None,
                  buttons=None, response_action=None, close_on_response=True,
-                 show=[], close_parent = False, close_before_response_action = False):
+                 show=[], close_parent = False, close_before_response_action = False, last_users=None):
         """ Initializes the Gtk.Dialog from its GLADE
         Args:
             message (str): type of message (See above constants)
@@ -109,6 +110,9 @@ class PopUp(Gtk.Widget):
 
         self.dialog = self.configure_ui(text, message, self.gui, parent)
 
+        global user_list
+        self.user_list = user_list
+        self.last_user_list = last_users
         # Specific glade modifications
         if message == OPERATIONS:
 
@@ -138,6 +142,18 @@ class PopUp(Gtk.Widget):
 
         elif message == ABOUT:
             self.set_logos(self.gui)
+            # WORKAROUND (TTK-16472):
+            # In some graphical environments the GtkAboutDialog default buttons would not appear
+            # This blocks Galicaster, as the dialog can't be closed
+            # As a workaround, we add a "Close" button if the dialog buttonbox is empty
+            # A more permanent solution might be crafting the about window manually
+            about_buttonbox = self.gui.get_object("aboutdialog-action_area1")
+            if len(about_buttonbox.get_children()) == 0 :
+                about_buttonbox.get_parent().set_property('visible' ,True)
+                close_button = Gtk.Button().new_with_label(_("Close"))
+                close_button.set_property('visible' ,True)
+                close_button.connect("clicked", self.dialog_destroy)
+                about_buttonbox.pack_start(close_button, False, True, 0)
 
         elif message == NEXT_REC:
             if text['next_recs']:
@@ -147,20 +163,22 @@ class PopUp(Gtk.Widget):
                 if no_recs:
                     no_recs.show()
 
-        elif message == LOCKSCREEN:
+        elif message == LOCKSCREEN or message == NFC_LOCKSCREEN:
             for element in show:
                 gtk_obj = self.gui.get_object(element)
                 if gtk_obj:
                     gtk_obj.show()
             self.gui.get_object("quitbutton").connect("clicked", context.get_mainwindow().do_quit)
-
+            self.gui.get_object("reloaduserbutton").connect("clicked", self.reload_users, self.last_user_list)
         # Display dialog
-        parent.get_style_context().add_class('shaded')
+        # FIXME shading doesnt work correctly
+        # parent.get_style_context().add_class('shaded')
         self.dialog.set_transient_for(parent)
-        if message in [ERROR, WARN_QUIT, WARN_STOP, ABOUT, INFO, WARN_DELETE, LOCKSCREEN, MP_INFO]:
+        if message in [ERROR, WARN_QUIT, WARN_STOP, ABOUT, INFO, WARN_DELETE, LOCKSCREEN, MP_INFO, NFC_LOCKSCREEN]:
             self.dispatcher.emit("action-audio-disable-msg")
             self.dialog.show()
             self.dialog.connect('response', self.on_dialog_response)
+            self.dialog.connect('key-press-event', self.keyPress)
         #elif message == ABOUT:
         #    #TODO: use on_dialog_response instead of on_about_dialog_response
         #    self.dialog.show_all()
@@ -169,8 +187,21 @@ class PopUp(Gtk.Widget):
         else:
             self.response = self.dialog.run()
             self.dialog.destroy()
-            parent.get_style_context().remove_class('shaded')
+            # FIXME shading doesnt work correctly
+            # parent.get_style_context().remove_class('shaded')
 
+    def reload_users(self, button, data):
+        # when reload user button pressed use the previous login ids
+        if data:
+            self.user_list = data
+            global user_list
+            user_list = data
+
+    def keyPress(self, origin, response_id):
+        if Gdk.keyval_name(response_id.keyval) == 'Return':
+
+            self.user_list.append(self.gui.get_object("unlockpass").get_text())
+            self.gui.get_object("unlockpass").set_text('')
 
     def configure_ui(self, text, message_type, gui, parent, another=None):
         """Imports the dialog from the corresponding GLADE and adds some configuration

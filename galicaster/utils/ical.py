@@ -18,33 +18,35 @@ from datetime import datetime
 
 from icalendar import Calendar
 from galicaster.mediapackage import mediapackage
+from galicaster.utils.systemcalls import execute
 
-count = 0
+def get_events_from_string_ical(ical_data, limit=0, logger=None):
+    try:
+        cal = Calendar.from_ical(ical_data)
+        now = datetime.utcnow()
+        events = [e for e in cal.walk('vevent') if e['DTEND'].dt.replace(tzinfo=None) >= now]
+        events = sorted(events, key=lambda event: event['DTSTART'].dt.replace(tzinfo=None))
 
-def get_events_from_string_ical(ical_data, limit=0):
-    global count
-    # See https://github.com/collective/icalendar#api-change
-    f = getattr(Calendar, 'from_ical', getattr(Calendar, 'from_string', None))
-    cal = f(ical_data)
-    if limit > 0:
-        events = cal.walk('vevent')[count:limit + count]
-        for event in events:
-            if event['DTEND'].dt.replace(tzinfo=None) < datetime.utcnow():
-                count += 1
-        count -= 1
-        if count > 0:
-            events = cal.walk('vevent')[count:limit + count]
-    else:
-        events = cal.walk('vevent')
-    # reset the counter
-    count = 0
-    return events
+        if limit > 0:
+            events = events[:limit]
 
+        return events
+    except Exception as exc:
+        logger and logger.error("There was an error processing calendar.ical file: {}".format(exc))
+        return None
 
-def get_events_from_file_ical(ical_file, limit=0):
+def get_events_from_file_ical(ical_file, limit=0, logger=None):
     ical_data = open(ical_file).read()
-    return get_events_from_string_ical(ical_data, limit)
+    events = get_events_from_string_ical(ical_data, limit, logger)
 
+    if events != None:
+        return events
+
+    else:
+        timestamp = datetime.now().replace(microsecond=0).isoformat()
+        logger and logger.info(("Renaming errored calendar from  calendar.ical to calendar.ical.old.{}, a new calendar.ical file will be created in the next long heartbeat").format(timestamp))
+        execute(["mv" , ical_file, ("{}.old.{}").format(ical_file, timestamp)], logger)
+        return list()
 
 def get_deleted_events(old_events, new_events):
     out = list()
@@ -125,6 +127,8 @@ def create_mp(repo, event):
 
     mp.setTitle(event['SUMMARY'])
     mp.setDate(event['DTSTART'].dt.replace(tzinfo=None))
+    diff = event['DTEND'].dt.replace(tzinfo=None) - event['DTSTART'].dt.replace(tzinfo=None)
+    mp.setDuration(diff.seconds*1000)
 
     catalog= mp.getCatalogs("dublincore/series")
     if catalog:
@@ -156,10 +160,8 @@ def create_mp(repo, event):
 
 def handle_ical(ical_data, last_events, repo, scheduler, logger):
     if ical_data:
-
-
         try:
-            events = get_events_from_string_ical(ical_data, limit=100)
+            events = get_events_from_string_ical(ical_data, limit=100, logger=logger)
             if last_events:
                 delete_events = get_deleted_events(last_events, events)
                 update_events = get_updated_events(last_events, events)

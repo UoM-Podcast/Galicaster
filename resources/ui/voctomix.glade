@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.18.3 -->
+<interface>
+  <requires lib="gtk+" version="3.18"/>
+  <object class="GtkBox" id="mainbox">
+    <property name="name">mainbox</property>
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="vexpand">False</property>
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkBox" id="rightbox">
+        <property name="name">rightbox</property>
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">5</property>
+        <child>
+          <object class="GtkBox" id="ctrl">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <property name="spacing">7</property>
+            <child>
+              <object class="GtkGrid" id="ctrlfield">
+                <property name="name">control</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="resize_mode">immediate</property>
+                <property name="row_spacing">20</property>
+                <property name="column_spacing">20</property>
+                <property name="row_homogeneous">True</property>
+                <property name="column_homogeneous">True</property>
+                <child>
+                  <object class="GtkButton" id="sbs">
+                    <property name="label" translatable="yes">Side By Side</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Return to home.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="grabber">
+                    <property name="label" translatable="yes">Screen</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move left up.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="cam1">
+                    <property name="label" translatable="yes">Cam 1</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move up.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="cam2">
+                    <property name="label" translatable="yes">Cam 2</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move right up.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="full">
+                    <property name="label" translatable="yes">Fullscreen</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move right.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                    <property name="yalign">0.46000000834465027</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="pause">
+                    <property name="label" translatable="yes">Stream Pause</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move down.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="livestreamm">
+                    <property name="label" translatable="yes">Stream ON</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move left down.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="pip">
+                    <property name="label" translatable="yes">PiP</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move left.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="noav">
+                    <property name="label" translatable="yes">Stream OFF</property>
+                    <property name="name">controlbuttons</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Move right down.</property>
+                    <property name="hexpand">False</property>
+                    <property name="vexpand">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="togglebutton1">
+                    <property name="label" translatable="yes">Start Sources</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="relief">none</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">-1</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="position">-1</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkAdjustment" id="moveadjustment">
+    <property name="upper">1</property>
+    <property name="value">0.5</property>
+    <property name="step_increment">0.10000000000000001</property>
+    <property name="page_increment">1</property>
+  </object>
+  <object class="GtkLabel" id="notebook_label">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="ypad">12</property>
+    <property name="label" translatable="yes">Voctomix</property>
+    <property name="xalign">0.20000000298023224</property>
+  </object>
+  <object class="GtkAdjustment" id="zoomadjustment">
+    <property name="upper">1</property>
+    <property name="value">0.5</property>
+    <property name="step_increment">0.10000000000000001</property>
+    <property name="page_increment">1</property>
+  </object>
+</interface>

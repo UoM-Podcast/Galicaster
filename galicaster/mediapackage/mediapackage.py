@@ -20,11 +20,9 @@ This module contains:
 """
 
 import uuid
-import re
 import time
 import os
-from dateutil import tz
-from dateutil import parser
+import re
 from os import path
 from datetime import datetime
 from xml.dom import minidom
@@ -291,7 +289,6 @@ class Track(Element):
             etype (str): 'Track' (element type)
             duration (int): the given duration of the track in seconds.
         """
-        tags=["archive"]
 
         super(Track, self).__init__(uri=uri, flavor=flavor, mimetype=mimetype, identifier=identifier, tags=tags)
         self.etype = TYPE_TRACK
@@ -431,8 +428,9 @@ class Mediapackage(object):
 
         # Catalog metadata
         date = date or datetime.utcnow().replace(microsecond = 0)
+        self.date = date
         self.metadata_episode = {"title" : title, "identifier" : identifier,
-                                 "creator" : presenter, "created" : date,}
+                                 "creator" : presenter, "created" : self.date}
 
         self.metadata_series = {'identifier': None,
                                 'title': None}
@@ -756,7 +754,7 @@ class Mediapackage(object):
         Returns:
             Datetime: Datetime of the mediapackage episode creation.
         """
-        return self.metadata_episode["created"]
+        return self.date
 
     def setDate(self, startTime):
         """Sets the date and time of the mediapackage episode creation.
@@ -764,7 +762,7 @@ class Mediapackage(object):
             startTime (Datetime): date and time to be set at creation parameter.
         """
         #FIXME check is datetime*
-        self.metadata_episode["created"] = startTime
+        self.date = startTime
 
     startTime = property(getDate, setDate)
 
@@ -775,7 +773,7 @@ class Mediapackage(object):
         """
         aux = time.time()
         utcdiff = datetime.utcfromtimestamp(aux) - datetime.fromtimestamp(aux)
-        return self.metadata_episode["created"] - utcdiff
+        return self.getDate() - utcdiff
 
     def setLocalDate(self, startTime):
         """Sets the local date and time of the mediapackage episode creation.
@@ -784,7 +782,7 @@ class Mediapackage(object):
         """
         aux = time.time()
         utcdiff = datetime.utcfromtimestamp(aux) - datetime.fromtimestamp(aux)
-        self.metadata_episode["created"] = startTime + utcdiff
+        self.setDate(startTime + utcdiff)
 
     def getStartDateAsString(self, isoformat=True, local=True):
         """Gets the mediapackage timestamp in a specific string format.
@@ -1370,7 +1368,7 @@ class Mediapackage(object):
         elem.setIdentifier(None)
 
         # If the element removed was a track, set the MP duration accordingly
-        if self.__howmany[TYPE_TRACK] == 0:
+        if elem.etype == TYPE_TRACK and self.__howmany[TYPE_TRACK] == 0:
             self.__duration = None
 
         if not soft:
@@ -1473,22 +1471,7 @@ class Mediapackage(object):
                 count = 0
                 AUDIENCE_TAGS = []
                 for name in EPISODE_TERMS:
-                    if name in ["created"]:
-                        creat = _checknget(dom, "dcterms:" + name)
-                        if creat:
-                            if creat[-1] == "Z":
-                                try:
-                                    self.setDate(datetime.strptime(creat, "%Y-%m-%dT%H:%M:%SZ"))
-                                except:
-                                    self.setDate(datetime.strptime(creat, "%Y-%m-%d %H:%M:%SZ"))
-                            else:
-                                try:
-                                    self.setDate(datetime.strptime(creat, "%Y-%m-%dT%H:%M:%S"))
-                                except:
-                                    self.setDate(datetime.strptime(creat, "%Y-%m-%d %H:%M:%S"))
-
-                                # parse erroneous format too
-                    elif name in ['creator']:
+                    if name in ['creator']:
                         self.setCreator(_checknget(dom, "dcterms:"+name))
                     elif name in ['isPartOf', 'ispartof']:
                         new = _checknget(dom, "dcterms:"+name)
@@ -1512,18 +1495,6 @@ class Mediapackage(object):
                     SERIES_TERMS.append(node.nodeName.split(':')[1])
                 for name in SERIES_TERMS:
                     self.metadata_series[name] = _checknget(dom, "dcterms:" + name)
-
-        # Parse temporal metadatum
-        if self.metadata_episode.has_key('temporal') and self.metadata_episode['temporal'] and not self.hasTracks():
-            try:
-                g = re.search('start=(.*); end=(.*); ', self.metadata_episode['temporal'])
-                start = parser.parse(g.group(1)).astimezone(tz.tzutc()).replace(tzinfo=None)
-                stop = parser.parse(g.group(2)).astimezone(tz.tzutc()).replace(tzinfo=None)
-                diff = stop - start
-                self.setDuration(diff.seconds*1000)
-                self.setDate(start)
-            except:
-                pass
 
     #FIXME merge with add
     def addAttachmentAsString(self, content, name=None, identifier=None):

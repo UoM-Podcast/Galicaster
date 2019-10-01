@@ -167,8 +167,19 @@ class DDP(Thread):
     def heartbeat(self, element):
         if self.client.connected:
             self.update_images(randint(0, 9))
+            self.update_rec_status()
         else:
             self.connect()
+
+    def update_rec_status(self):
+        self.update(
+            'rooms', {
+                '_id': self.id
+            }, {
+                '$set': {
+                    'recording': self.recording
+                }
+            })
 
     def on_start_recording(self, sender, id):
         self.recording = True

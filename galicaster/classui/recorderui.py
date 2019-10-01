@@ -111,6 +111,8 @@ class RecorderClassUI(Gtk.Box):
         self.vumeterL = builder.get_object("progressbarL")
         self.vumeterR = builder.get_object("progressbarR")
         self.label_channels= builder.get_object("label_channels")
+        self.low_audio = False
+        self.lowaudio_threshold = self.conf.get_float('lowaudio','lowaudio_threshold')
 
         # SWAP
         if not self.conf.get_boolean('basic', 'swapvideos'):
@@ -151,6 +153,12 @@ class RecorderClassUI(Gtk.Box):
         # OTHER
         builder.connect_signals(self)
         self.net_activity = self.conf.get_boolean('ingest', 'active')
+        self.pausedialog_size = self.conf.get_int('basic', 'pausedialog_size',
+                                                  default=15)
+        if self.pausedialog_size < 5:
+            self.pausedialog_size = 5
+        elif self.pausedialog_size > 100:
+            self.pausedialog_size = 100
 
         self.proportion = 1
 
@@ -186,13 +194,18 @@ class RecorderClassUI(Gtk.Box):
 
         average = (data + data2)/2.0
         if not self.mute:
+            if self.lowaudio_threshold and average < (self.lowaudio_threshold):
+                self.dispatcher.emit("low-audio")
+                self.low_audio = True
             if average < (self.thresholdVum):
                 self.dispatcher.emit("audio-mute")
                 self.mute = True
         if self.mute and average > (self.thresholdVum + 5.0):
             self.dispatcher.emit("audio-recovered")
             self.mute = False
-
+        if self.low_audio and self.lowaudio_threshold and average > (self.lowaudio_threshold + 5.0):
+            self.dispatcher.emit("low-audio-recovered")
+            self.low_audio = False
 
         if data < -self.rangeVum:
             valor = 1
@@ -248,13 +261,12 @@ class RecorderClassUI(Gtk.Box):
         dialog.set_modal(True)
         dialog.set_keep_above(False)
         dialog.set_skip_taskbar_hint(True)
-        size = context.get_mainwindow().get_size()
-        k2 = size[1] / 1080.0
-        size = int(k2*150)
+        scale = context.get_mainwindow().get_size()[1] / 100.0
+        size = int(scale*self.pausedialog_size)
         dialog.set_default_size(size,size)
         button = gui.get_object("image")
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(get_image_path('gc-pause.svg'))
-        pixbuf = pixbuf.scale_simple(size, size, GdkPixbuf.InterpType.BILINEAR)
+        pause_svg = get_image_path('gc-pause.svg')
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(pause_svg, size, size)
         button.set_from_pixbuf(pixbuf)
         return dialog
 

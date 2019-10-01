@@ -17,6 +17,7 @@
 import os
 import zipfile
 from datetime import datetime
+from datetime import timedelta
 from os import path
 # from os import system
 from xml.dom import minidom
@@ -248,15 +249,15 @@ def set_manifest(mp, use_namespace=True):
         track.setAttribute("id", t.getIdentifier())
         track.setAttribute("type", t.getFlavor())
 
-        #TAGS
         # -- TAGS --
-        tags = doc.createElement("tags")
-        for tag_elem in t.getTags():
-            tag = doc.createElement("tag")
-            tagtext = doc.createTextNode(tag_elem)
-            tag.appendChild(tagtext)
-            tags.appendChild(tag)
-        track.appendChild(tags)
+        if t.getTags():
+            tags = doc.createElement("tags")
+            for tag_elem in t.getTags():
+                tag = doc.createElement("tag")
+                tagtext = doc.createTextNode(tag_elem)
+                tag.appendChild(tagtext)
+                tags.appendChild(tag)
+            track.appendChild(tags)
         ## --    --
 
         mime = doc.createElement("mimetype")
@@ -476,6 +477,16 @@ def set_episode(mp):
 
         except KeyError:
             continue
+
+    if 'temporal' not in mp.metadata_episode and mp.getDuration():
+        elem = doc.createElement("dcterms:temporal" )
+        start = mp.getDate().isoformat() + "Z"
+        end = (mp.getDate() + timedelta(seconds=mp.getDuration()/1000)).isoformat() + "Z"
+        temporal_data = 'start={start}; end={end}; scheme=W3C-DTF;'.format(start=start, end=end)
+        text = doc.createTextNode(unicode(temporal_data))
+        elem.appendChild(text)
+        xml.appendChild(elem)
+
     return doc.toprettyxml(indent="   ", newl="\n", encoding="utf-8") #without encoding
 
 
