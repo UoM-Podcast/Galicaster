@@ -25,7 +25,7 @@ pipe_config = {'mpeg4':
                    {'depay': 'rtph264depay', 'parse': 'h264parse', 'dec': 'avdec_h264'}}
 
 
-pipestr = (' tcpclientsrc name=gc-voctomix-src port=11000 ! queue ! '
+pipestr = (' tcpclientsrc name=gc-voctomix-src port=gc-voctomix-port ! queue ! '
            ' matroskademux ! videoscale ! capsfilter name=gc-voctomix-filter ! '
            ' tee name=gc-voctomix-tee  ! queue ! caps-preview ! gc-vsink '
            ' gc-voctomix-tee. ! queue ! valve drop=false name=gc-voctomix-valve ! videoconvert ! '
@@ -62,6 +62,11 @@ class GCvoctomix(Gst.Bin, base.Base):
             "type": "text",
             "default": "localhost",
             "description": "host for voctomix",
+        },
+        "port": {
+            "type": "text",
+            "default": "11000",
+            "description": "port for voctomix",
         },
         "file": {
             "type": "text",
@@ -123,7 +128,8 @@ class GCvoctomix(Gst.Bin, base.Base):
                .replace('gc-voctomix-videoparse', pipe_config[self.options['cameratype']]['parse'])
                .replace('gc-voctomix-dec', pipe_config[self.options['cameratype']]['dec'])
                .replace('gc-voctomix-enc', self.options['videoencoder'])
-               .replace('gc-voctomix-muxer', self.options['muxer']))
+               .replace('gc-voctomix-muxer', self.options['muxer'])
+               .replace('gc-voctomix-port', self.options['port']))
 
         if self.options["caps-preview"]:
             aux = aux.replace("caps-preview !","videoscale ! videorate ! "+self.options["caps-preview"]+" !")
