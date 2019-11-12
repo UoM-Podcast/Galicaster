@@ -107,7 +107,7 @@ class GCvoctomix(Gst.Bin, base.Base):
 
     }
 
-    is_pausable = False
+    is_pausable = True
     has_audio   = False
     has_video   = True
 
