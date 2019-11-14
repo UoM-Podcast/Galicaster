@@ -40,12 +40,12 @@ randomString() {
 
 set -- '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' \
 	'<smil version="3.0" baseProfile="Language" xmlns="http://www.w3.org/ns/SMIL" xml:id="s-'"$( randomString )"'" xmlns:oc="http://smil.opencastproject.org">' \
-	'<head xmlns="http://www.w3.org/1999/xhtml" xml:id="h-'"$( randomString )"'">' \
+	'<head xml:id="h-'"$( randomString )"'">' \
 	   '<meta name="media-package-id" content="%replace_MediaPackage_ID%" xml:id="meta-'"$( randomString )"'"/>' \
 	   '<meta name="track-duration" content="%replace_audio_trim_duration%ms" xml:id="meta-'"$( randomString )"'"/>' \
 	   '%replace_head%' \
 	'</head>' \
-	'<body xmlns="http://www.w3.org/1999/xhtml" xml:id="b-'"$( randomString )"'">' \
+	'<body xml:id="b-'"$( randomString )"'">' \
 	   '%replace_body%' \
 	'</body>' \
 	'</smil>'
@@ -58,12 +58,12 @@ set -- '<paramGroup xml:id="pg-%head_id%">' \
        '</paramGroup>'
 TMP_SMIL_HEAD="$*"
 
-set -- '<par xml:id="par-'"$( randomString )"'">' \
+set -- '<par xml:id="par-%random_part%">' \
           '<video clipBegin="%segment_start%ms" clipEnd="%segment_end%ms" src="'"$( randomString )"'" paramGroup="pg-%paramGroup_id%" xml:id="param-'"$( randomString )"'"/>' \
        '</par>'
 
 TMP_SMIL_BODY="$*"
-
+# '"$( randomString )"'
 presenter_id=$( randomString )
 presentation_id=$( randomString )
 presentation2_id=$( randomString )
@@ -102,10 +102,12 @@ do
 #do
     segment_start=${segments[i]}
     segment_end=${segments[i+1]}
+    random_part=$( randomString )
     #echo "$segment_start - $segment_end"
 
     tmp=${TMP_SMIL_BODY/"%segment_start%"/$segment_start}
     tmp=${tmp/"%segment_end%"/$segment_end}
+    tmp=${tmp/"%random_part%"/$random_part}
 
     if $Has_presenter; then
       SMIL_BODY+=${tmp/"%paramGroup_id%"/$presenter_id}
