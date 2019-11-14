@@ -58,12 +58,12 @@ set -- '<paramGroup xml:id="pg-%head_id%">' \
        '</paramGroup>'
 TMP_SMIL_HEAD="$*"
 
-set -- '<par xml:id="par-'"$( randomString )"'">' \
+set -- '<par xml:id="par-%random_part%">' \
           '<video clipBegin="%segment_start%ms" clipEnd="%segment_end%ms" src="'"$( randomString )"'" paramGroup="pg-%paramGroup_id%" xml:id="param-'"$( randomString )"'"/>' \
        '</par>'
 
 TMP_SMIL_BODY="$*"
-
+# '"$( randomString )"'
 presenter_id=$( randomString )
 presentation_id=$( randomString )
 presentation2_id=$( randomString )
@@ -102,10 +102,12 @@ do
 #do
     segment_start=${segments[i]}
     segment_end=${segments[i+1]}
+    random_part=$( randomString )
     #echo "$segment_start - $segment_end"
 
     tmp=${TMP_SMIL_BODY/"%segment_start%"/$segment_start}
     tmp=${tmp/"%segment_end%"/$segment_end}
+    tmp=${tmp/"%random_part%"/$random_part}
 
     if $Has_presenter; then
       SMIL_BODY+=${tmp/"%paramGroup_id%"/$presenter_id}
