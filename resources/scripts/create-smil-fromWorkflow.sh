@@ -40,12 +40,12 @@ randomString() {
 
 set -- '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' \
 	'<smil version="3.0" baseProfile="Language" xmlns="http://www.w3.org/ns/SMIL" xml:id="s-'"$( randomString )"'" xmlns:oc="http://smil.opencastproject.org">' \
-	'<head xmlns="http://www.w3.org/1999/xhtml" xml:id="h-'"$( randomString )"'">' \
+	'<head xml:id="h-'"$( randomString )"'">' \
 	   '<meta name="media-package-id" content="%replace_MediaPackage_ID%" xml:id="meta-'"$( randomString )"'"/>' \
 	   '<meta name="track-duration" content="%replace_audio_trim_duration%ms" xml:id="meta-'"$( randomString )"'"/>' \
 	   '%replace_head%' \
 	'</head>' \
-	'<body xmlns="http://www.w3.org/1999/xhtml" xml:id="b-'"$( randomString )"'">' \
+	'<body xml:id="b-'"$( randomString )"'">' \
 	   '%replace_body%' \
 	'</body>' \
 	'</smil>'
