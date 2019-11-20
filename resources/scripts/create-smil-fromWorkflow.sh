@@ -75,7 +75,7 @@ if $Has_presenter; then
   tmp=${TMP_SMIL_HEAD/"%head_id%"/$presenter_id}
   tmp=${tmp/"%head_flavor%"/"presenter/work"}
   SMIL_HEAD+=$tmp
-fi
+else
 
 if $Has_presentation; then
   tmp=${TMP_SMIL_HEAD/"%head_id%"/$presentation_id}
@@ -88,7 +88,7 @@ if $Has_presentation2; then
   tmp=${tmp/"%head_flavor%"/"presentation2/work"}
   SMIL_HEAD+=$tmp
 fi
-
+fi
 
 #echo ${#segments[@]}
 
@@ -111,7 +111,7 @@ do
 
     if $Has_presenter; then
       SMIL_BODY+=${tmp/"%paramGroup_id%"/$presenter_id}
-    fi
+    else
 
     if $Has_presentation; then
       SMIL_BODY+=${tmp/"%paramGroup_id%"/$presentation_id}
@@ -119,6 +119,7 @@ do
 
     if $Has_presentation2; then
       SMIL_BODY+=${tmp/"%paramGroup_id%"/$presentation2_id}
+    fi
     fi
 done
 
