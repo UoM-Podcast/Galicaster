@@ -50,7 +50,7 @@ INGEST_SERVICE_TYPE = 'org.opencastproject.ingest'
 class OCHTTPClient(object):
     
     def __init__(self, server, user, password, hostname='galicaster', address=None, multiple_ingest=False, 
-                 random_ingest=False, stop_admin_ingest=False, connect_timeout=60, timeout=60, workflow='full', workflow_parameters={'trimHold':'true'},
+                 random_ingest=False, stop_admin_ingest=False, ingest_server=None, connect_timeout=60, timeout=60, workflow='full', workflow_parameters={'trimHold':'true'},
                  ca_parameters={}, polling_short=10, polling_long=60, repo=None, logger=None):
         """
         Arguments:
@@ -86,6 +86,7 @@ class OCHTTPClient(object):
         self.multiple_ingest = multiple_ingest
         self.random_ingest = random_ingest
         self.stop_admin_ingest = stop_admin_ingest
+        self.ingest_server = ingest_server
         self.connect_timeout = connect_timeout
         self.timeout = timeout
         self.workflow = workflow
@@ -389,9 +390,12 @@ class OCHTTPClient(object):
         if self.stop_admin_ingest:
             raise ValueError("No valid ingest nodes are available")
         return None  # it will use the admin server
+
     def ingest(self, mp_file, mp_id, workflow=None, workflow_instance=None, workflow_parameters=None):
         postdict = self._prepare_ingest(mp_file, workflow, workflow_instance, workflow_parameters)
-        if self.multiple_ingest:
+        if self.ingest_server:
+            server = self.ingest_server
+        elif self.multiple_ingest:
             ingest_server = self.get_ingest_server()
             if ingest_server:
                 server = ingest_server
