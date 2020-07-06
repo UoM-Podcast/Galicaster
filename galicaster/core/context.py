@@ -117,6 +117,7 @@ def get_occlient():
                                     multiple_ingest,
                                     random_ingest,
                                     stop_admin_ingest,
+                                    conf.get('ingest', 'ingest-server'),
                                     connect_timeout,
                                     timeout,
                                     conf.get('ingest', 'workflow'),
