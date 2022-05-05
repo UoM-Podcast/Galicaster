@@ -33,6 +33,13 @@ import getpass
 import os
 from os import path
 
+import graypy
+
+from galicaster.core import context
+
+conf = context.get_conf()
+
+
 class Logger(logging.Logger):
     def __init__(self, log_path, level="DEBUG", rotate=False, use_syslog=False):
         logging.Logger.__init__(self, "galicaster", level)
@@ -72,6 +79,14 @@ class Logger(logging.Logger):
         self.addFilter(GalicasterFilter())
         self.addHandler(loghandler)
 
+        # graylog support
+        if conf.get_boolean('graylog', 'enable'):
+            graylog_handler = graypy.GELFUDPHandler(
+                conf.get('graylog', 'server'),
+                conf.get_int('graylog', 'port'))
+            graylog_handler.setFormatter(
+                logging.Formatter("\t".join(formatting)))
+            self.addHandler(graylog_handler)
 
     def get_path(self):
         return self.log_path
@@ -88,10 +103,14 @@ class GalicasterFilter(logging.Filter):
         # Insert the username in a parameter named 'user'
         record.user = GalicasterFilter.CURRENT_USER
 
+        # add room name for graylog
+        record.room = conf.get_hostname()
+
+        # add ip address for graylog
+        record.ip = conf.get('ingest', 'address')
+
         pathname = record.pathname
         if pathname.find('galicaster/') > -1:
             record.pathname = "/".join(os.path.splitext(pathname)[0].split("/")[-2:])
 
         return True
-
-
