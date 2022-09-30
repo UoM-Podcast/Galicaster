@@ -12,7 +12,9 @@
 # San Francisco, California, 94105, USA.
 
 import os
+import random
 import tempfile
+import time
 import Queue
 import json
 import xml.etree.ElementTree
@@ -54,7 +56,7 @@ This operations are threads concurrently done with the rest of galicaster tasks 
 class Worker(object):
 
     def __init__(self, dispatcher, repo, logger, oc_client=None, export_path=None, tmp_path=None,
-                 use_namespace=True, sbs_layout='sbs', hide_ops=[], hide_nightly=[]):
+                 use_namespace=True, sbs_layout='sbs', hide_ops=[], hide_nightly=[], ingest_delay=None):
         """Initializes a worker that manages the mediapackages of the repository in order to do long operations concurrently by throwing Threads when necessay.
         Args:
             dispacher (Dispatcher): the galicaster event-dispatcher to emit signals.
@@ -88,6 +90,12 @@ class Worker(object):
         self.logger = logger
         self.hide_ops = hide_ops
         self.hide_nightly = hide_nightly
+
+        if ingest_delay:
+            self.ingest_delay = random.randrange(ingest_delay)
+            self.logger.info(
+                "ingest delay_max is configured as {}s. Setting actual delay to: {}s".format(
+                    ingest_delay, self.ingest_delay))
 
         for dir_path in (self.export_path, self.tmp_path):
             if not os.path.isdir(dir_path):
@@ -319,6 +327,12 @@ class Worker(object):
 
         ifile = tempfile.NamedTemporaryFile(dir=self.tmp_path)
         self._export_to_zip(mp, params={"location" : ifile, "is_action": False})
+
+        if self.ingest_delay:
+            self.logger.info(
+                "Delaying ingest for MP {} for {} seconds".format(
+                    mp.getIdentifier(), self.ingest_delay))
+            time.sleep(self.ingest_delay)
 
         if mp.manual:
             ingest_response = self.oc_client.ingest(ifile.name, mp.getIdentifier(), workflow=workflow, workflow_instance=None, workflow_parameters=workflow_parameters)

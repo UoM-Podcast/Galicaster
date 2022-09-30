@@ -199,6 +199,7 @@ def get_worker():
     from galicaster.core.worker import Worker
 
     legacy = get_conf().get_boolean('ingest', 'legacy') or get_conf().get_boolean('basic', 'legacy')
+
     if 'worker' not in __galicaster_context:
         __galicaster_context['worker'] = Worker(get_dispatcher(),
                                                 get_repository(),
@@ -209,7 +210,8 @@ def get_worker():
                                                 not legacy,
                                                 get_conf().get('sidebyside', 'layout'),
                                                 get_conf().get_list('operations', 'hide'),
-                                                get_conf().get_list('operations', 'hide_nightly'))
+                                                get_conf().get_list('operations', 'hide_nightly'),
+                                                get_conf().get_int('ingest', 'delay_max', None))
 
     return __galicaster_context['worker']
 
