@@ -94,7 +94,7 @@ class Worker(object):
         if ingest_delay:
             self.ingest_delay = random.randrange(ingest_delay)
             self.logger.info(
-                "max delay is configured as {}s. Setting delay to: {}s".format(
+                "ingest delay_max is configured as {}s. Setting actual delay to: {}s".format(
                     ingest_delay, self.ingest_delay))
 
         for dir_path in (self.export_path, self.tmp_path):
