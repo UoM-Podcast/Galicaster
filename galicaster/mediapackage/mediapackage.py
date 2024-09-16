@@ -1481,6 +1481,9 @@ class Mediapackage(object):
                         aud = _checknget(dom, "dcterms:" + name, count)
                         AUDIENCE_TAGS.append(aud)
                         count +=1
+                    elif name in ['identifier']:
+                        # don't overwrite the mpid in case it iss wrong in episode.xml
+                        continue
                     else:
                         self.metadata_episode[name] = _checknget(dom, "dcterms:" + name)
                 if AUDIENCE_TAGS is not []:
