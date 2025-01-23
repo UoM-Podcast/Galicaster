@@ -15,7 +15,6 @@ import datetime
 from os import path
 
 from galicaster.utils import ical
-from galicaster.opencast.series import get_series
 
 from galicaster.utils.queuethread import T
 import Queue
@@ -170,11 +169,6 @@ class OCService(object):
         """
         if self.net:
             self.jobs.put((self.process_ical,()))
-
-
-    def update_series(self):
-        self.logger.info('Updating series from server')
-        self.series = get_series()
 
 
     def init_client(self, sender=None):

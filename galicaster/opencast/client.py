@@ -36,7 +36,7 @@ SETSTATE_ENDPOINT = 'capture-admin/agents/{hostname}'
 SETCONF_ENDPOINT = 'capture-admin/agents/{hostname}/configuration'
 INGEST_ENDPOINT = 'ingest/addZippedMediaPackage'
 ICAL_ENDPOINT = 'recordings/calendars'
-SERIES_ENDPOINT = 'series/series.json'
+SERIES_BY_ID_ENDPOINT = '/series/{id}.json'
 SERVICE_REGISTRY_ENDPOINT = 'services/available.json'
 SEARCH_ENDPOINT = 'search/episode.json'
 WORKFLOWS_ENDPOINT = 'workflow/definitions.json'
@@ -407,11 +407,9 @@ class OCHTTPClient(object):
             self.logger.info( 'Ingesting MP {} to Server {}'.format(mp_id, server) )
         return self.__call('POST', INGEST_ENDPOINT, {}, {}, postdict.items(), False, server, False)
 
-    def getseries(self, **query):
-        """ Get series according to the page count and offset provided"""
-
-        return self.__call('GET', SERIES_ENDPOINT, query_params = query)
-
+    def getseries_byid(self, series_id):
+        """ Get specific series"""
+        return self.__call('GET', SERIES_BY_ID_ENDPOINT, {'id': series_id})
 
     def get_workflows(self, server=None):
         """ Get workflow names """
